@@ -1,0 +1,64 @@
+<%- include('partials/header') %>
+
+<section class="page-hero">
+  <div class="container">
+    <h1>Classes</h1>
+    <p class="section-lede">
+      A progressive coaching program built around three stages: Foundations,
+      Refinement, and Applied Skills.
+    </p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="course-grid">
+      <% content.courses.forEach((course) => { %>
+        <article class="course-card">
+          <h2><%= course.name %></h2>
+          <p class="course-intro"><%= course.intro %></p>
+
+          <h4>Training Focuses On</h4>
+          <ul>
+            <% course.focuses.forEach((focus) => { %>
+              <li><%= focus %></li>
+            <% }) %>
+          </ul>
+
+          <dl class="course-details">
+            <div><dt>Experience</dt><dd><%= course.experience %></dd></div>
+            <div><dt>Firearm</dt><dd><%= course.firearm %></dd></div>
+            <div><dt>Ammunition</dt><dd><%= course.ammunition %></dd></div>
+            <div><dt>Minimum age</dt><dd><%= course.minimumAge %></dd></div>
+          </dl>
+        </article>
+      <% }) %>
+    </div>
+
+    <div class="participation">
+      <h2>Participation Requirements</h2>
+      <p class="section-lede">Every participant must:</p>
+      <ul>
+        <li>Be at least 21 years old</li>
+        <li>Present valid government-issued identification</li>
+        <li>Be legally permitted to possess and use firearms</li>
+        <li>Provide the approved firearm required for the selected course</li>
+        <li>Use only ammunition supplied by Front Line Refinement</li>
+        <li>Follow all coach commands and host-range rules</li>
+        <li>Wear approved eye and hearing protection</li>
+        <li>Complete and sign the required liability waiver before participating</li>
+      </ul>
+      <p class="disclaimer">
+        Front Line Refinement courses provide private firearms and marksmanship
+        coaching. Unless specifically stated otherwise in writing, courses are not
+        Wisconsin CCW-certification classes and do not issue a state-recognized
+        firearm-training credential.
+      </p>
+      <div class="safety-closing">
+        <p>No completed liability waiver means no firearm handling and no shooting. No exceptions.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

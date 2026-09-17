@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Front Line Refinement</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="admin-body">
+  <header class="admin-header">
+    <div class="container admin-header-inner">
+      <a href="/admin" class="brand">
+        <span class="brand-mark">FLR</span>
+        <span class="brand-text"><span class="brand-name">Admin Panel</span></span>
+      </a>
+      <nav class="admin-nav">
+        <a href="/admin?section=bio" class="<%= section === 'bio' ? 'active' : '' %>">Biography &amp; About</a>
+        <a href="/admin?section=courses" class="<%= section === 'courses' ? 'active' : '' %>">Courses</a>
+        <a href="/admin?section=safety" class="<%= section === 'safety' ? 'active' : '' %>">Safety Rules</a>
+        <a href="/admin/account">Account</a>
+        <form method="post" action="/admin/logout" class="inline-form">
+          <button type="submit" class="btn btn-ghost btn-sm">Log Out</button>
+        </form>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container admin-main">
+    <div class="admin-title-row">
+      <h1>Edit Your Website</h1>
+      <span class="admin-username">Signed in as <%= username %></span>
+    </div>
+
+    <% if (saveError) { %>
+      <div class="alert alert-error"><%= saveError %></div>
+    <% } %>
+
+    <% if (saved) { %>
+      <div class="alert alert-success">Changes saved successfully.</div>
+    <% } %>
+
+    <!-- Biography & About -->
+    <section class="admin-section" id="section-bio">
+      <h2>Biography &amp; About</h2>
+      <form method="post" action="/admin/content" class="admin-form">
+        <label>
+          Name
+          <input type="text" name="bio_name" value="<%= content.bio_name || '' %>" />
+        </label>
+        <label>
+          Title
+          <input type="text" name="bio_title" value="<%= content.bio_title || '' %>" />
+        </label>
+        <label>
+          Biography (HTML allowed)
+          <textarea name="bio_body" rows="14"><%= content.bio_body || '' %></textarea>
+        </label>
+        <label>
+          About / Company Info (HTML allowed)
+          <textarea name="about_body" rows="12"><%= content.about_body || '' %></textarea>
+        </label>
+        <label>
+          About Closing Line
+          <input type="text" name="about_line" value="<%= content.about_line || '' %>" />
+        </label>
+        <button type="submit" class="btn btn-primary">Save Biography &amp; About</button>
+      </form>
+      <p class="admin-sub">Tip: wrap paragraphs in <code>&lt;p&gt;...&lt;/p&gt;</code> tags.</p>
+    </section>
+
+    <!-- Courses -->
+    <section class="admin-section" id="section-courses">
+      <h2>Courses</h2>
+      <p class="admin-sub">
+        Edit courses in JSON format. Keep the structure intact — each course needs
+        <code>id</code>, <code>name</code>, <code>intro</code>,
+        <code>focuses</code> (a list of strings), <code>experience</code>,
+        <code>firearm</code>, <code>ammunition</code>, and <code>minimumAge</code>.
+      </p>
+      <form method="post" action="/admin/courses" class="admin-form">
+        <label>
+          Courses JSON
+          <textarea name="courses" rows="36" class="mono"><%= content.courses || '' %></textarea>
+        </label>
+        <button type="submit" class="btn btn-primary">Save Courses</button>
+      </form>
+    </section>
+
+    <!-- Safety Rules -->
+    <section class="admin-section" id="section-safety">
+      <h2>Safety Rules</h2>
+      <form method="post" action="/admin/safety" class="admin-form">
+        <label>
+          Intro paragraph
+          <textarea name="safety_intro" rows="3"><%= content.safety_intro || '' %></textarea>
+        </label>
+        <label>
+          Safety rules JSON
+          <textarea name="safety_rules" rows="28" class="mono"><%= content.safety_rules || '' %></textarea>
+        </label>
+        <label>
+          Closing line
+          <input type="text" name="safety_closing" value="<%= content.safety_closing || '' %>" />
+        </label>
+        <button type="submit" class="btn btn-primary">Save Safety Rules</button>
+      </form>
+      <p class="admin-sub">Rules use the format: a list of <code>{ "title": "...", "body": ["...", "..."] }</code>.</p>
+    </section>
+  </main>
+
+  <script src="/js/main.js"></script>
+</body>
+</html>

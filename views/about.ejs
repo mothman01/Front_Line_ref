@@ -1,0 +1,20 @@
+<%- include('partials/header') %>
+
+<section class="page-hero">
+  <div class="container">
+    <h1>About</h1>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container narrow">
+    <div class="prose">
+      <%- content.aboutBody %>
+    </div>
+    <div class="about-line">
+      <blockquote><%= content.aboutLine %></blockquote>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

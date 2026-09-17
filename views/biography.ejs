@@ -1,0 +1,24 @@
+<%- include('partials/header') %>
+
+<section class="page-hero">
+  <div class="container">
+    <h1>Biography</h1>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container narrow">
+    <div class="bio-head">
+      <div class="avatar"><%= content.bioName.charAt(0) %></div>
+      <div>
+        <h2><%= content.bioName %></h2>
+        <p class="bio-title"><%= content.bioTitle %></p>
+      </div>
+    </div>
+    <div class="prose">
+      <%- content.bioBody %>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

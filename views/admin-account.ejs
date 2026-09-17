@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Account — Front Line Refinement</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="admin-body">
+  <header class="admin-header">
+    <div class="container admin-header-inner">
+      <a href="/admin" class="brand">
+        <span class="brand-mark">FLR</span>
+        <span class="brand-text"><span class="brand-name">Admin Panel</span></span>
+      </a>
+      <nav class="admin-nav">
+        <a href="/admin?section=bio">Biography &amp; About</a>
+        <a href="/admin?section=courses">Courses</a>
+        <a href="/admin/account" class="active">Account</a>
+        <form method="post" action="/admin/logout" class="inline-form">
+          <button type="submit" class="btn btn-ghost btn-sm">Log Out</button>
+        </form>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container admin-main narrow">
+    <h1>Account Settings</h1>
+
+    <% if (error) { %>
+      <div class="alert alert-error"><%= error %></div>
+    <% } %>
+    <% if (message) { %>
+      <div class="alert alert-success"><%= message %></div>
+    <% } %>
+
+    <form method="post" action="/admin/account" class="admin-form">
+      <label>
+        Current Password
+        <input type="password" name="currentPassword" autocomplete="current-password" required />
+      </label>
+      <label>
+        New Username (optional)
+        <input type="text" name="newUsername" value="<%= username %>" autocomplete="username" />
+      </label>
+      <label>
+        New Password (optional — leave blank to keep current)
+        <input type="password" name="newPassword" autocomplete="new-password" />
+      </label>
+      <label>
+        Confirm New Password
+        <input type="password" name="confirmPassword" autocomplete="new-password" />
+      </label>
+      <button type="submit" class="btn btn-primary">Update Account</button>
+    </form>
+  </main>
+</body>
+</html>

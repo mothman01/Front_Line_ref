@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= content.siteName %><%= pageTitle ? ' — ' + pageTitle : '' %></title>
+  <meta name="description" content="Front Line Refinement provides structured, safety-focused firearms and marksmanship coaching for responsible adults." />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="/" class="brand">
+        <span class="brand-mark">FLR</span>
+        <span class="brand-text">
+          <span class="brand-name">Front Line Refinement</span>
+          <span class="brand-tagline">Fundamentals First. Confidence Follows.</span>
+        </span>
+      </a>
+      <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+      <nav class="site-nav">
+        <a href="/" class="<%= activePage === 'home' ? 'active' : '' %>">Home</a>
+        <a href="/biography" class="<%= activePage === 'biography' ? 'active' : '' %>">Biography</a>
+        <a href="/about" class="<%= activePage === 'about' ? 'active' : '' %>">About</a>
+        <a href="/safety" class="<%= activePage === 'safety' ? 'active' : '' %>">Safety Rules</a>
+        <a href="/classes" class="<%= activePage === 'classes' ? 'active' : '' %>">Classes</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Owner Login — Front Line Refinement</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="admin-body">
+  <main class="admin-login-wrap">
+    <div class="admin-login-card">
+      <div class="brand-mark brand-mark-lg">FLR</div>
+      <h1>Owner Login</h1>
+      <p class="admin-sub">Sign in to edit your website content.</p>
+
+      <% if (error) { %>
+        <div class="alert alert-error"><%= error %></div>
+      <% } %>
+
+      <form method="post" action="/admin/login" class="admin-form">
+        <label>
+          Username
+          <input type="text" name="username" autocomplete="username" required autofocus />
+        </label>
+        <label>
+          Password
+          <input type="password" name="password" autocomplete="current-password" required />
+        </label>
+        <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+      </form>
+
+      <p class="admin-back"><a href="/">&larr; Back to site</a></p>
+    </div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<%- include('partials/header') %>
+
+<section class="page-hero">
+  <div class="container">
+    <h1>Safety Rules</h1>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container narrow">
+    <p class="section-lede"><%= content.safetyIntro %></p>
+
+    <div class="rules">
+      <% content.safetyRules.forEach((rule, i) => { %>
+        <div class="rule">
+          <h3><span class="rule-num"><%= i + 1 %></span> <%= rule.title %></h3>
+          <ul>
+            <% rule.body.forEach((item) => { %>
+              <li><%= item %></li>
+            <% }) %>
+          </ul>
+        </div>
+      <% }) %>
+    </div>
+
+    <div class="safety-closing">
+      <p><%= content.safetyClosing %></p>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>
