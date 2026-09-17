@@ -43,21 +43,29 @@ ADMIN_USERNAME=admin ADMIN_PASSWORD=your-strong-password npm start
 
 ## Production Deployment
 
-1. Put this folder on your server (Node.js host, VPS, or any host supporting Node apps).
-2. Run `npm install --production` then `npm start`.
-3. Set a strong `ADMIN_PASSWORD` environment variable (and optionally `ADMIN_USERNAME`) and a random `SESSION_SECRET`.
-4. Put the app behind HTTPS (e.g. nginx, Caddy, or your host's proxy) so passwords are transmitted securely.
-5. Site content and the admin account are stored at `data/site.json`.
+This is a **Node.js server app**, so it cannot run on static hosts like GitHub Pages. Use any Node.js-capable host. Render and Railway are the simplest options and both have free tiers.
+
+1. Push this repo to GitHub, then connect it to your chosen host (or deploy from this folder directly).
+2. The host will run `npm install` then `npm start`.
+3. Set these **required environment variables** in your host's settings:
+   - `NODE_ENV=production`
+   - `ADMIN_PASSWORD` — a strong password for the initial admin account
+   - `SESSION_SECRET` — a long, random value (e.g. `openssl rand -hex 32`)
+   - `ADMIN_USERNAME` — optional, defaults to `admin`
+   - `PORT` — set automatically by most hosts; defaults to `3000` locally
+4. Site content and the admin account are stored at `data/site.json`.
+
+> ⚠️ In production, the app will refuse to start if `SESSION_SECRET` or `ADMIN_PASSWORD` are not set. This is intentional — it prevents the site from running with an insecure default password or an unstable session secret.
 
 Environment variables:
 
-| Variable          | Purpose                                      |
-| ----------------- | -------------------------------------------- |
-| `PORT`            | Port to listen on (default `3000`)           |
-| `ADMIN_USERNAME`  | Initial admin username (default `admin`)     |
-| `ADMIN_PASSWORD`  | Initial admin password (default `ChangeMeNow!123`) |
-| `SESSION_SECRET`  | Secret used to sign session cookies          |
-| `NODE_ENV`        | Set to `production` for hardened cookies     |
+| Variable          | Purpose                                                                 |
+| ----------------- | ----------------------------------------------------------------------- |
+| `PORT`            | Port to listen on (default `3000`)                                      |
+| `ADMIN_USERNAME`  | Initial admin username (default `admin`)                                |
+| `ADMIN_PASSWORD`  | Initial admin password (**required in production**)                     |
+| `SESSION_SECRET`  | Secret used to sign session cookies (**required in production**)        |
+| `NODE_ENV`        | Set to `production` for hardened, secure cookies                        |
 
 ## Project Structure
 

@@ -9,6 +9,11 @@ const { ensureAdminUser, seedDefaultContent } = require('./lib/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
+// Trust the first proxy hop so req.secure and secure cookies work correctly
+// when deployed behind HTTPS proxies (Render, Railway, Fly.io, nginx, etc.).
+app.set('trust proxy', 1);
 
 // Make sure an admin account and default content exist before serving anything.
 const createdAdmin = ensureAdminUser();
@@ -27,7 +32,19 @@ app.use(express.json());
 
 // Sessions. Using the in-memory store keeps the app dependency-free; sessions
 // simply reset on restart, which is acceptable for a single-owner admin tool.
-const sessionSecret = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
+// In production, require a persistent, cryptographically strong session secret.
+// A generated one is fine for local dev, but would invalidate all sessions on
+// every restart in production.
+const sessionSecret =
+  process.env.SESSION_SECRET ||
+  (IS_PRODUCTION ? '' : crypto.randomBytes(32).toString('hex'));
+
+if (IS_PRODUCTION && !sessionSecret) {
+  throw new Error(
+    'SESSION_SECRET must be set in production. Set a long random value in your host environment variables.'
+  );
+}
+
 app.use(
   session({
     secret: sessionSecret,
@@ -36,7 +53,9 @@ app.use(
     cookie: {
       httpOnly: true,
       sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
+      // Secure cookies require HTTPS, which is always true behind Render/Railway
+      // proxies (and locally rejected otherwise).
+      secure: IS_PRODUCTION,
       maxAge: 1000 * 60 * 60 * 12, // 12 hours
     },
   })
