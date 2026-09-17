@@ -23,6 +23,7 @@
         <a href="/admin?section=images" class="<%= section === 'images' ? 'active' : '' %>">Images</a>
         <a href="/admin?section=views" class="<%= section === 'views' ? 'active' : '' %>">Views</a>
         <a href="/admin/account">Account</a>
+        <a href="/" target="_blank" class="btn btn-primary btn-sm" style="margin-left:8px">View Site &nearr;</a>
         <form method="post" action="/admin/logout" class="inline-form">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
           <button type="submit" class="btn btn-ghost btn-sm">Log Out</button>
@@ -118,35 +119,51 @@
     <!-- Courses -->
     <section class="admin-section" id="section-courses">
       <h2>Courses</h2>
+      <p class="admin-sub">Edit each course directly below. Focus points are one per line. <a href="/classes" target="_blank" class="text-link">Preview the Classes page &rarr;</a></p>
 
-      <!-- Quick price editor -->
-      <h3 style="margin-top:4px">Prices</h3>
-      <form method="post" action="/admin/prices" class="admin-form">
+      <form method="post" action="/admin/courses-form" class="admin-form">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-        <% courses.forEach(function (c) { %>
-          <label>
-            <%= c.name %>
-            <input type="text" name="price_<%= c.id %>" value="<%= c.price || '' %>" placeholder="e.g. $150" />
-          </label>
+        <% courses.forEach(function (c, idx) { %>
+          <div class="course-editor" data-index="<%= idx %>">
+            <h3><%= c.name %></h3>
+            <input type="hidden" name="course_<%= idx %>_id" value="<%= c.id %>" />
+            <label>
+              Course name
+              <input type="text" name="course_<%= idx %>_name" value="<%= c.name %>" />
+            </label>
+            <label>
+              Short introduction
+              <textarea name="course_<%= idx %>_intro" rows="2"><%= c.intro %></textarea>
+            </label>
+            <label>
+              Focus points (one per line)
+              <textarea name="course_<%= idx %>_focuses" rows="5"><%= (c.focuses || []).join('\n') %></textarea>
+            </label>
+            <div class="form-grid">
+              <label>
+                Experience required
+                <input type="text" name="course_<%= idx %>_experience" value="<%= c.experience %>" />
+              </label>
+              <label>
+                Firearm
+                <input type="text" name="course_<%= idx %>_firearm" value="<%= c.firearm %>" />
+              </label>
+              <label>
+                Ammunition
+                <input type="text" name="course_<%= idx %>_ammunition" value="<%= c.ammunition %>" />
+              </label>
+              <label>
+                Price
+                <input type="text" name="course_<%= idx %>_price" value="<%= c.price || '' %>" placeholder="e.g. $150" />
+              </label>
+              <label>
+                Minimum age
+                <input type="text" name="course_<%= idx %>_minimumAge" value="<%= c.minimumAge %>" />
+              </label>
+            </div>
+          </div>
         <% }) %>
-        <button type="submit" class="btn btn-primary">Save Prices</button>
-      </form>
-
-      <hr style="border:none;border-top:1px solid var(--border);margin:28px 0" />
-
-      <p class="admin-sub">
-        Advanced: edit the full course list in JSON format. Each course needs
-        <code>id</code>, <code>name</code>, <code>intro</code>,
-        <code>focuses</code> (a list of strings), <code>experience</code>,
-        <code>firearm</code>, <code>ammunition</code>, <code>price</code>, and <code>minimumAge</code>.
-      </p>
-      <form method="post" action="/admin/courses" class="admin-form">
-        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-        <label>
-          Courses JSON
-          <textarea name="courses" rows="36" class="mono"><%= content.courses || '' %></textarea>
-        </label>
-        <button type="submit" class="btn btn-primary">Save Courses</button>
+        <button type="submit" class="btn btn-primary">Save All Courses</button>
       </form>
     </section>
 

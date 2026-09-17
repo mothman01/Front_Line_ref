@@ -151,6 +151,31 @@ router.post('/safety', requireAuth, async (req, res) => {
 });
 
 // ---- Courses editing ------------------------------------------------------
+// Form-based editor (the primary UI) — parses per-course fields back into JSON.
+router.post('/courses-form', requireAuth, async (req, res) => {
+  const current = JSON.parse((await getContent('courses')) || '[]');
+  const updated = current.map((course, idx) => {
+    const p = (name) => req.body[`course_${idx}_${name}`];
+    const focusesRaw = p('focuses') || '';
+    return {
+      ...course,
+      id: p('id') || course.id,
+      name: p('name') || course.name,
+      intro: p('intro') || course.intro,
+      focuses: focusesRaw.split('\n').map((s) => s.trim()).filter(Boolean),
+      experience: p('experience') || course.experience,
+      firearm: p('firearm') || course.firearm,
+      ammunition: p('ammunition') || course.ammunition,
+      price: (p('price') || '').trim(),
+      minimumAge: p('minimumAge') || course.minimumAge,
+    };
+  });
+
+  await setContent('courses', JSON.stringify(updated));
+  res.redirect('/admin?section=courses&saved=1');
+});
+
+// Legacy JSON editor (kept for advanced users).
 router.post('/courses', requireAuth, async (req, res) => {
   const raw = req.body.courses || '[]';
   try {
@@ -163,19 +188,6 @@ router.post('/courses', requireAuth, async (req, res) => {
     });
   }
 
-  res.redirect('/admin?section=courses&saved=1');
-});
-
-// ---- Quick price editing (friendly, non-technical) ------------------------
-router.post('/prices', requireAuth, async (req, res) => {
-  const courses = JSON.parse((await getContent('courses')) || '[]');
-  for (const course of courses) {
-    const key = `price_${course.id}`;
-    if (key in req.body) {
-      course.price = (req.body[key] || '').trim();
-    }
-  }
-  await setContent('courses', JSON.stringify(courses));
   res.redirect('/admin?section=courses&saved=1');
 });
 

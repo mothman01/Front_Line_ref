@@ -1105,6 +1105,31 @@ p {
   border: 2px solid var(--accent);
 }
 
+/* ---- Course editor (form-based) -------------------------------------------- */
+
+.course-editor {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  background: var(--bg);
+}
+
+.course-editor h3 {
+  color: var(--accent);
+  margin-bottom: 16px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .form-grid { grid-template-columns: 1fr; }
+}
+
 /* ---- Admin login ----------------------------------------------------------- */
 
 .admin-login-wrap {
