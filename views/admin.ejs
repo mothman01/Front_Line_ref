@@ -17,8 +17,11 @@
         <a href="/admin?section=bio" class="<%= section === 'bio' ? 'active' : '' %>">Biography &amp; About</a>
         <a href="/admin?section=courses" class="<%= section === 'courses' ? 'active' : '' %>">Courses</a>
         <a href="/admin?section=safety" class="<%= section === 'safety' ? 'active' : '' %>">Safety Rules</a>
+        <a href="/admin?section=waivers" class="<%= section === 'waivers' ? 'active' : '' %>">Waivers</a>
+        <a href="/admin?section=calendar" class="<%= section === 'calendar' ? 'active' : '' %>">Calendar</a>
         <a href="/admin/account">Account</a>
         <form method="post" action="/admin/logout" class="inline-form">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
           <button type="submit" class="btn btn-ghost btn-sm">Log Out</button>
         </form>
       </nav>
@@ -43,6 +46,7 @@
     <section class="admin-section" id="section-bio">
       <h2>Biography &amp; About</h2>
       <form method="post" action="/admin/content" class="admin-form">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
         <label>
           Name
           <input type="text" name="bio_name" value="<%= content.bio_name || '' %>" />
@@ -78,6 +82,7 @@
         <code>firearm</code>, <code>ammunition</code>, and <code>minimumAge</code>.
       </p>
       <form method="post" action="/admin/courses" class="admin-form">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
         <label>
           Courses JSON
           <textarea name="courses" rows="36" class="mono"><%= content.courses || '' %></textarea>
@@ -90,6 +95,7 @@
     <section class="admin-section" id="section-safety">
       <h2>Safety Rules</h2>
       <form method="post" action="/admin/safety" class="admin-form">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
         <label>
           Intro paragraph
           <textarea name="safety_intro" rows="3"><%= content.safety_intro || '' %></textarea>
@@ -105,6 +111,84 @@
         <button type="submit" class="btn btn-primary">Save Safety Rules</button>
       </form>
       <p class="admin-sub">Rules use the format: a list of <code>{ "title": "...", "body": ["...", "..."] }</code>.</p>
+    </section>
+
+    <!-- Waivers -->
+    <section class="admin-section" id="section-waivers">
+      <h2>Signed Waivers (<%= waiverCount || 0 %>)</h2>
+      <% if (waivers && waivers.length) { %>
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>DOB</th>
+              <th>Signed</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% waivers.forEach(function (w) { %>
+              <tr>
+                <td><%= w.full_name %></td>
+                <td><%= w.email %></td>
+                <td><%= w.phone || '—' %></td>
+                <td><%= w.date_of_birth || '—' %></td>
+                <td><%= new Date(w.signed_at).toLocaleString() %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      <% } else { %>
+        <p class="admin-sub">No waivers have been signed yet.</p>
+      <% } %>
+    </section>
+
+    <!-- Calendar -->
+    <section class="admin-section" id="section-calendar">
+      <h2>Appointments</h2>
+      <% if (appointments && appointments.length) { %>
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>When</th>
+              <th>Customer</th>
+              <th>Email</th>
+              <th>Course</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% appointments.forEach(function (a) { %>
+              <tr>
+                <td><%= new Date(a.scheduled_at).toLocaleString() %></td>
+                <td><%= a.customer_name %></td>
+                <td><%= a.email %></td>
+                <td><%= a.course %></td>
+                <td><%= a.status %></td>
+                <td>
+                  <% if (a.status !== 'cancelled') { %>
+                    <form method="post" action="/admin/appointments/cancel" class="inline-form">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                      <input type="hidden" name="id" value="<%= a.id %>" />
+                      <button type="submit" class="btn btn-ghost btn-sm">Cancel</button>
+                    </form>
+                  <% } else { %>
+                    <form method="post" action="/admin/appointments/confirm" class="inline-form">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                      <input type="hidden" name="id" value="<%= a.id %>" />
+                      <button type="submit" class="btn btn-ghost btn-sm">Reinstate</button>
+                    </form>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      <% } else { %>
+        <p class="admin-sub">No appointments booked yet.</p>
+      <% } %>
     </section>
   </main>
 

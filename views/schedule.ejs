@@ -1,0 +1,80 @@
+<%- include('partials/header') %>
+
+<section class="page-hero">
+  <div class="container">
+    <h1>Schedule a Session</h1>
+    <p class="section-lede">Book a coaching session. We'll confirm your appointment by email.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container narrow">
+    <% if (success) { %>
+      <div class="alert alert-success">
+        Your appointment request was received. Please complete the <a href="/waiver">liability waiver</a> before your session.
+      </div>
+    <% } else { %>
+
+      <% if (error) { %>
+        <div class="alert alert-error"><%= error %></div>
+      <% } %>
+
+      <form method="post" action="/schedule" class="admin-form">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
+        <label>
+          Your name
+          <input type="text" name="customer_name" value="<%= form && form.customer_name || '' %>" required />
+        </label>
+        <label>
+          Email
+          <input type="email" name="email" value="<%= form && form.email || '' %>" required />
+        </label>
+        <label>
+          Phone
+          <input type="tel" name="phone" value="<%= form && form.phone || '' %>" />
+        </label>
+        <label>
+          Course
+          <select name="course" required>
+            <option value="">— Select a course —</option>
+            <option value="Pistol Foundations">Pistol Foundations</option>
+            <option value="Carbine Foundations">Carbine Foundations</option>
+            <option value="Pistol Refinement">Pistol Refinement</option>
+            <option value="Carbine Refinement">Carbine Refinement</option>
+            <option value="Applied Movement and Defensive Skills">Applied Movement and Defensive Skills</option>
+            <option value="Home-Defense Scenario and Emergency Response">Home-Defense Scenario and Emergency Response</option>
+          </select>
+        </label>
+        <label>
+          Preferred date &amp; time
+          <input type="datetime-local" name="scheduled_at" required />
+        </label>
+        <label>
+          Notes (optional)
+          <textarea name="notes" rows="3"><%= form && form.notes || '' %></textarea>
+        </label>
+
+        <button type="submit" class="btn btn-primary">Request Appointment</button>
+      </form>
+
+    <% } %>
+
+    <% if (appointments && appointments.length) { %>
+      <div class="calendar-list">
+        <h3>Upcoming Appointments</h3>
+        <ul>
+          <% appointments.forEach(function (a) { %>
+            <li>
+              <strong><%= new Date(a.scheduled_at).toLocaleString() %></strong>
+              — <%= a.course %>
+              <span class="muted">(<%= a.status === 'cancelled' ? 'cancelled' : 'open' %>)</span>
+            </li>
+          <% }) %>
+        </ul>
+      </div>
+    <% } %>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

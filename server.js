@@ -4,7 +4,12 @@ const path = require('path');
 const crypto = require('crypto');
 const express = require('express');
 const session = require('express-session');
+const helmet = require('helmet');
+const cookieParser = require('cookie-parser');
+const connectPgSimple = require('connect-pg-simple');
 
+const { initSchema, pool, hasDatabase } = require('./lib/db');
+const csrf = require('./lib/csrf');
 const { ensureAdminUser, seedDefaultContent } = require('./lib/auth');
 
 const app = express();
@@ -15,26 +20,27 @@ const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 // when deployed behind HTTPS proxies (Render, Railway, Fly.io, nginx, etc.).
 app.set('trust proxy', 1);
 
-// Make sure an admin account and default content exist before serving anything.
-const createdAdmin = ensureAdminUser();
-seedDefaultContent();
-
 // View engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
+// Security headers
+app.use(
+  helmet({
+    contentSecurityPolicy: false, // EJS templates inline styles; configure later if needed
+  })
+);
+
 // Static assets
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Body parsing
+// Body & cookie parsing
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(cookieParser());
 
-// Sessions. Using the in-memory store keeps the app dependency-free; sessions
-// simply reset on restart, which is acceptable for a single-owner admin tool.
-// In production, require a persistent, cryptographically strong session secret.
-// A generated one is fine for local dev, but would invalidate all sessions on
-// every restart in production.
+// Sessions. In production, backed by Postgres (Neon) so sessions survive
+// restarts. A generated secret is fine for local dev only.
 const sessionSecret =
   process.env.SESSION_SECRET ||
   (IS_PRODUCTION ? '' : crypto.randomBytes(32).toString('hex'));
@@ -45,21 +51,32 @@ if (IS_PRODUCTION && !sessionSecret) {
   );
 }
 
-app.use(
-  session({
-    secret: sessionSecret,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      httpOnly: true,
-      sameSite: 'lax',
-      // Secure cookies require HTTPS, which is always true behind Render/Railway
-      // proxies (and locally rejected otherwise).
-      secure: IS_PRODUCTION,
-      maxAge: 1000 * 60 * 60 * 12, // 12 hours
-    },
-  })
-);
+const sessionConfig = {
+  secret: sessionSecret,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: IS_PRODUCTION,
+    maxAge: 1000 * 60 * 60 * 12, // 12 hours
+  },
+};
+
+if (hasDatabase) {
+  const PgSession = connectPgSimple(session);
+  sessionConfig.store = new PgSession({
+    pool,
+    tableName: 'session',
+    createTableIfMissing: true,
+  });
+}
+
+app.use(session(sessionConfig));
+
+// CSRF protection (double-submit cookie). Applied before routes so all forms
+// must embed the token.
+app.use(csrf);
 
 // Make flags available to all templates.
 app.use((req, res, next) => {
@@ -89,11 +106,26 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Front Line Refinement running at http://localhost:${PORT}`);
-  if (createdAdmin) {
-    console.log(
-      `Initial admin account created: "${createdAdmin}" — sign in at /admin/login and change the password.`
-    );
-  }
+// Initialize the database schema, seed defaults, and ensure an admin account
+// exist before listening. This is async, so we wrap startup.
+async function boot() {
+  await initSchema();
+  const createdAdmin = await ensureAdminUser();
+  await seedDefaultContent();
+
+  app.listen(PORT, () => {
+    console.log(`Front Line Refinement running at http://localhost:${PORT}`);
+    if (createdAdmin) {
+      console.log(
+        `Initial admin account created: "${createdAdmin}" — sign in at /admin/login and change the password.`
+      );
+    }
+  });
+}
+
+boot().catch((err) => {
+  console.error('Failed to start server:', err);
+  process.exit(1);
 });
+
+module.exports = app;

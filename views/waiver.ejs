@@ -1,0 +1,66 @@
+<%- include('partials/header') %>
+
+<section class="page-hero">
+  <div class="container">
+    <h1>Liability Waiver</h1>
+    <p class="section-lede">Complete and sign this waiver before your scheduled session.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container narrow">
+    <% if (success) { %>
+      <div class="alert alert-success">
+        Your waiver was submitted successfully. Please bring a valid government-issued ID to your session.
+      </div>
+    <% } else { %>
+
+      <% if (error) { %>
+        <div class="alert alert-error"><%= error %></div>
+      <% } %>
+
+      <div class="waiver-notice">
+        <p><strong>No completed liability waiver means no firearm handling and no shooting. No exceptions.</strong></p>
+      </div>
+
+      <form method="post" action="/waiver" class="admin-form">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
+        <label>
+          Full legal name
+          <input type="text" name="full_name" value="<%= form && form.full_name || '' %>" required />
+        </label>
+        <label>
+          Email
+          <input type="email" name="email" value="<%= form && form.email || '' %>" required />
+        </label>
+        <label>
+          Phone
+          <input type="tel" name="phone" value="<%= form && form.phone || '' %>" />
+        </label>
+        <label>
+          Address
+          <input type="text" name="address" value="<%= form && form.address || '' %>" />
+        </label>
+        <label>
+          Date of birth
+          <input type="date" name="date_of_birth" value="<%= form && form.date_of_birth || '' %>" />
+        </label>
+
+        <label class="checkbox-row">
+          <input type="checkbox" name="legal_attestation" value="true" />
+          <span>I confirm that no law, court order, criminal conviction, or other restriction prohibits me from possessing or handling a firearm or ammunition.</span>
+        </label>
+
+        <label>
+          Electronic signature (type your full name)
+          <input type="text" name="signature" value="<%= form && form.signature || '' %>" required />
+        </label>
+
+        <button type="submit" class="btn btn-primary">Submit Waiver</button>
+      </form>
+    <% } %>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

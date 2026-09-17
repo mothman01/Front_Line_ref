@@ -1,23 +1,27 @@
 # Front Line Refinement
 
-A firearms and marksmanship coaching website with a password-protected admin panel so the site owner can edit all text content (biography, company info, safety rules, and course listings) without touching code.
+A firearms and marksmanship coaching website with a password-protected admin panel, online liability waivers, and a scheduling calendar.
 
 ## Features
 
-- Public website with Home, Biography, About, Safety Rules, and Classes pages.
+- Public website with Home, Biography, About, Safety Rules, Classes, Schedule, and Waiver pages.
 - Professionally styled, mobile-responsive, tactical dark theme.
 - Secure password-protected admin area for editing all page content.
-- Content stored in a simple JSON file (no database setup required).
+- Online **liability waiver** submission and viewing.
+- **Scheduling calendar** — customers book appointments; the owner sees and manages them.
+- Content, users, waivers, and appointments stored in **PostgreSQL (Neon)**.
 - Session-based authentication with bcrypt password hashing.
+- CSRF protection, login rate-limiting, and hardened security headers (Helmet).
 - Admin can change their own password and username.
-- Uses only pure-JavaScript dependencies (no native builds), so installation is reliable on any Node.js host.
 
 ## Requirements
 
 - Node.js 18 or newer.
-- Internet access only for the initial `npm install` (site runs fully offline afterward).
+- A PostgreSQL database connection string (Neon is recommended) for production.
 
-## Quick Start
+## Quick Start (local, without a database)
+
+For local development you can run without a database — the app falls back to an in-memory store (data is lost on restart):
 
 ```bash
 npm install
@@ -26,46 +30,32 @@ npm start
 
 Then open http://localhost:3000 in your browser.
 
-## First-Time Setup
+## Production (with Neon / PostgreSQL)
 
-On first run, an admin account is created automatically with these credentials:
+Set these environment variables:
 
-- **Username:** `admin`
-- **Password:** `ChangeMeNow!123`
+| Variable          | Purpose                                                        |
+| ----------------- | -------------------------------------------------------------- |
+| `DATABASE_URL`    | PostgreSQL connection string (Neon `postgresql://...` URL)     |
+| `NODE_ENV`        | Set to `production`                                            |
+| `ADMIN_PASSWORD`  | Strong initial admin password (required in production)         |
+| `SESSION_SECRET`  | Long random value for signing session cookies (required)       |
+| `ADMIN_USERNAME`  | Initial admin username (default `admin`)                       |
+| `PORT`            | Port (default `3000`; set automatically by most hosts)         |
 
-Log in at http://localhost:3000/admin and **immediately change the password** using the form in the admin panel. You can also change the username.
+> ⚠️ In production, the app refuses to start unless `DATABASE_URL`, `ADMIN_PASSWORD`, and `SESSION_SECRET` are set. This prevents insecure defaults and data loss.
 
-You can set your own initial credentials at any time (before first launch) via environment variables:
+## Deployment
 
-```bash
-ADMIN_USERNAME=admin ADMIN_PASSWORD=your-strong-password npm start
-```
+This is a **Node.js server app** — it cannot run on static hosts like GitHub Pages. Use Render, Railway, Fly.io, or any Node.js host:
 
-## Production Deployment
+1. Push this repo to GitHub and connect your host to it.
+2. Set the environment variables above.
+3. The host runs `npm install` then `npm start`.
 
-This is a **Node.js server app**, so it cannot run on static hosts like GitHub Pages. Use any Node.js-capable host. Render and Railway are the simplest options and both have free tiers.
+### First-time admin credentials
 
-1. Push this repo to GitHub, then connect it to your chosen host (or deploy from this folder directly).
-2. The host will run `npm install` then `npm start`.
-3. Set these **required environment variables** in your host's settings:
-   - `NODE_ENV=production`
-   - `ADMIN_PASSWORD` — a strong password for the initial admin account
-   - `SESSION_SECRET` — a long, random value (e.g. `openssl rand -hex 32`)
-   - `ADMIN_USERNAME` — optional, defaults to `admin`
-   - `PORT` — set automatically by most hosts; defaults to `3000` locally
-4. Site content and the admin account are stored at `data/site.json`.
-
-> ⚠️ In production, the app will refuse to start if `SESSION_SECRET` or `ADMIN_PASSWORD` are not set. This is intentional — it prevents the site from running with an insecure default password or an unstable session secret.
-
-Environment variables:
-
-| Variable          | Purpose                                                                 |
-| ----------------- | ----------------------------------------------------------------------- |
-| `PORT`            | Port to listen on (default `3000`)                                      |
-| `ADMIN_USERNAME`  | Initial admin username (default `admin`)                                |
-| `ADMIN_PASSWORD`  | Initial admin password (**required in production**)                     |
-| `SESSION_SECRET`  | Secret used to sign session cookies (**required in production**)        |
-| `NODE_ENV`        | Set to `production` for hardened, secure cookies                        |
+On first run, the admin account is created from `ADMIN_USERNAME` / `ADMIN_PASSWORD`. Log in at `/admin/login` and change the password in the Account section.
 
 ## Project Structure
 
@@ -73,7 +63,6 @@ Environment variables:
 public/         Static assets (CSS, JS)
 views/          Server-rendered EJS templates
 routes/         Express route handlers
-lib/            Store, auth, and default-content helpers
-data/site.json  Content + admin account (created at runtime)
+lib/            DB, store, auth, waivers, appointments, and security helpers
 server.js       App entry point
 ```

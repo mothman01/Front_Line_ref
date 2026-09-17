@@ -18,6 +18,7 @@
       <% } %>
 
       <form method="post" action="/admin/login" class="admin-form">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
         <label>
           Username
           <input type="text" name="username" autocomplete="username" required autofocus />
