@@ -60,6 +60,25 @@
 
     <% } %>
 
+    <% if (events && events.length) { %>
+      <div class="events-list">
+        <h3>Upcoming Classes &amp; Events</h3>
+        <% events.forEach(function (e) { %>
+          <div class="event-item">
+            <h4><%= e.title %></h4>
+            <p class="event-meta">
+              <strong><%= new Date(e.starts_at).toLocaleString() %></strong>
+              <% if (e.ends_at) { %> – <%= new Date(e.ends_at).toLocaleString() %><% } %>
+              <% if (e.location) { %> &middot; <%= e.location %><% } %>
+              <% if (e.course_name) { %> &middot; <%= e.course_name %><% } %>
+              <% if (e.price) { %> &middot; <%= e.price %><% } %>
+            </p>
+            <% if (e.description) { %><p><%= e.description %></p><% } %>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+
     <% if (appointments && appointments.length) { %>
       <div class="calendar-list">
         <h3>Upcoming Appointments</h3>

@@ -5,6 +5,8 @@ const router = express.Router();
 const { getContent } = require('../lib/store');
 const { defaultCourses, defaultSafetyRules } = require('../lib/defaults');
 const { listBlockedSlots, listAppointments } = require('../lib/appointments');
+const { listEvents } = require('../lib/events');
+const { listImages } = require('../lib/images');
 
 const SITE_NAME = 'Front Line Refinement';
 
@@ -45,7 +47,9 @@ async function pageData(activePage) {
 }
 
 router.get('/', async (req, res) => {
-  res.render('home', await pageData('home'));
+  const data = await pageData('home');
+  data.images = await listImages();
+  res.render('home', data);
 });
 
 router.get('/biography', async (req, res) => {
@@ -66,6 +70,21 @@ router.get('/classes', async (req, res) => {
     (await getContent('courses')) || JSON.stringify(defaultCourses())
   );
   res.render('classes', data);
+});
+
+// Serve a slideshow image by ID (stored in Postgres as a data URL).
+router.get('/image/:id', async (req, res) => {
+  const { getImage } = require('../lib/images');
+  const img = await getImage(req.params.id);
+  if (!img) return res.status(404).end();
+  // img.data is a data URL like "data:image/jpeg;base64,..."
+  const match = img.data.match(/^data:([^;]+);base64,(.*)$/);
+  if (!match) return res.status(500).end();
+  const mimeType = match[1];
+  const buf = Buffer.from(match[2], 'base64');
+  res.set('Content-Type', mimeType);
+  res.set('Cache-Control', 'public, max-age=86400');
+  res.send(buf);
 });
 
 // ---- Waiver ----------------------------------------------------------------
@@ -134,12 +153,14 @@ router.post('/waiver', async (req, res) => {
 router.get('/schedule', async (req, res) => {
   const appts = await listAppointments();
   const blocked = await listBlockedSlots();
+  const events = await listEvents();
   res.render('schedule', {
     activePage: 'schedule',
     siteName: SITE_NAME,
     pageTitle: 'Schedule a Session',
     content: { siteName: SITE_NAME },
     appointments: appts,
+    events,
     blocked: blocked,
     success: false,
     error: null,

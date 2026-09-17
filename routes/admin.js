@@ -5,6 +5,7 @@ const rateLimit = require('express-rate-limit');
 const router = express.Router();
 
 const {
+  getContent,
   setContent,
   getAllContent,
   getUserByUsername,
@@ -19,6 +20,8 @@ const {
   cancelAppointment,
   confirmAppointment,
 } = require('../lib/appointments');
+const { createEvent, listEvents, deleteEvent } = require('../lib/events');
+const { listImages, saveImage, deleteImage } = require('../lib/images');
 
 // Login rate limiting (brute-force protection).
 const loginLimiter = rateLimit({
@@ -65,8 +68,10 @@ router.post('/logout', requireAuth, (req, res) => {
 
 // ---- Dashboard ------------------------------------------------------------
 router.get('/', requireAuth, async (req, res) => {
-  const validSections = ['bio', 'courses', 'safety', 'waivers', 'calendar'];
+  const validSections = ['bio', 'courses', 'safety', 'waivers', 'calendar', 'events', 'images'];
   const section = validSections.includes(req.query.section) ? req.query.section : 'bio';
+
+  const courses = JSON.parse((await getContent('courses')) || '[]');
 
   const data = {
     section,
@@ -77,6 +82,9 @@ router.get('/', requireAuth, async (req, res) => {
     waivers: await listWaivers(),
     waiverCount: await countWaivers(),
     appointments: await listAppointments(),
+    events: await listEvents(),
+    images: await listImages(),
+    courses,
   };
 
   res.render('admin', data);
@@ -136,6 +144,19 @@ router.post('/courses', requireAuth, async (req, res) => {
   res.redirect('/admin?section=courses&saved=1');
 });
 
+// ---- Quick price editing (friendly, non-technical) ------------------------
+router.post('/prices', requireAuth, async (req, res) => {
+  const courses = JSON.parse((await getContent('courses')) || '[]');
+  for (const course of courses) {
+    const key = `price_${course.id}`;
+    if (key in req.body) {
+      course.price = (req.body[key] || '').trim();
+    }
+  }
+  await setContent('courses', JSON.stringify(courses));
+  res.redirect('/admin?section=courses&saved=1');
+});
+
 // ---- Calendar management (cancel/confirm) ---------------------------------
 router.post('/appointments/cancel', requireAuth, async (req, res) => {
   await cancelAppointment(req.body.id);
@@ -145,6 +166,59 @@ router.post('/appointments/cancel', requireAuth, async (req, res) => {
 router.post('/appointments/confirm', requireAuth, async (req, res) => {
   await confirmAppointment(req.body.id);
   res.redirect('/admin?section=calendar');
+});
+
+// ---- Events management -----------------------------------------------------
+router.post('/events', requireAuth, async (req, res) => {
+  const { title, course_id, course_name, starts_at, ends_at, location, price, description } = req.body;
+
+  if (!title || !starts_at) {
+    return res.redirect('/admin?section=events');
+  }
+
+  // If course_id is provided, look up the course name.
+  let resolvedName = course_name;
+  if (course_id && !course_name) {
+    const courses = JSON.parse((await getContent('courses')) || '[]');
+    const c = courses.find((x) => x.id === course_id);
+    if (c) resolvedName = c.name;
+  }
+
+  await createEvent({
+    title,
+    course_id,
+    course_name: resolvedName,
+    starts_at,
+    ends_at,
+    location,
+    price,
+    description,
+  });
+
+  res.redirect('/admin?section=events&saved=1');
+});
+
+router.post('/events/delete', requireAuth, async (req, res) => {
+  await deleteEvent(req.body.id);
+  res.redirect('/admin?section=events');
+});
+
+// ---- Images management -----------------------------------------------------
+router.post('/images', requireAuth, async (req, res) => {
+  const { filename, mimeType, dataUrl } = req.body;
+  if (!filename || !mimeType || !dataUrl) {
+    return res.status(400).json({ error: 'Missing image data.' });
+  }
+  if (!mimeType.startsWith('image/')) {
+    return res.status(400).json({ error: 'Only images are allowed.' });
+  }
+  const img = await saveImage({ filename, mimeType, dataUrl });
+  res.json({ ok: true, id: img.id });
+});
+
+router.delete('/images/:id', requireAuth, async (req, res) => {
+  await deleteImage(req.params.id);
+  res.json({ ok: true });
 });
 
 // ---- Account (username/password) -----------------------------------------
@@ -207,6 +281,9 @@ async function renderAdmin(res, req, section, extra = {}) {
     waivers: await listWaivers(),
     waiverCount: await countWaivers(),
     appointments: await listAppointments(),
+    events: await listEvents(),
+    images: await listImages(),
+    courses: JSON.parse((await getContent('courses')) || '[]'),
   };
   res.render('admin', { ...data, ...extra });
 }

@@ -60,6 +60,33 @@
   </div>
 </section>
 
+<% if (images && images.length) { %>
+<section class="section section-alt">
+  <div class="container">
+    <h2>Gallery</h2>
+    <div class="slideshow">
+      <% images.forEach((img, i) => { %>
+        <img
+          class="slide <%= i === 0 ? 'active' : '' %>"
+          src="/image/<%= img.id %>"
+          alt="Gallery image <%= i + 1 %>"
+          loading="<%= i === 0 ? 'eager' : 'lazy' %>"
+        />
+      <% }) %>
+      <% if (images.length > 1) { %>
+        <button class="slide-btn prev" aria-label="Previous">&larr;</button>
+        <button class="slide-btn next" aria-label="Next">&rarr;</button>
+        <div class="slide-dots">
+          <% images.forEach((img, i) => { %>
+            <span class="dot <%= i === 0 ? 'active' : '' %>" data-index="<%= i %>"></span>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</section>
+<% } %>
+
 <section class="section">
   <div class="container">
     <h2>Training Pathways</h2>

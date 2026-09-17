@@ -34,9 +34,9 @@ app.use(
 // Static assets
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Body & cookie parsing
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+// Body & cookie parsing. Increased JSON limit to accommodate base64 image uploads.
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+app.use(express.json({ limit: '25mb' }));
 app.use(cookieParser());
 
 // Sessions. In production, backed by Postgres (Neon) so sessions survive

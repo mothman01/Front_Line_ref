@@ -18,7 +18,9 @@
         <a href="/admin?section=courses" class="<%= section === 'courses' ? 'active' : '' %>">Courses</a>
         <a href="/admin?section=safety" class="<%= section === 'safety' ? 'active' : '' %>">Safety Rules</a>
         <a href="/admin?section=waivers" class="<%= section === 'waivers' ? 'active' : '' %>">Waivers</a>
-        <a href="/admin?section=calendar" class="<%= section === 'calendar' ? 'active' : '' %>">Calendar</a>
+        <a href="/admin?section=calendar" class="<%= section === 'calendar' ? 'active' : '' %>">Appointments</a>
+        <a href="/admin?section=events" class="<%= section === 'events' ? 'active' : '' %>">Events</a>
+        <a href="/admin?section=images" class="<%= section === 'images' ? 'active' : '' %>">Images</a>
         <a href="/admin/account">Account</a>
         <form method="post" action="/admin/logout" class="inline-form">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
@@ -75,11 +77,27 @@
     <!-- Courses -->
     <section class="admin-section" id="section-courses">
       <h2>Courses</h2>
+
+      <!-- Quick price editor -->
+      <h3 style="margin-top:4px">Prices</h3>
+      <form method="post" action="/admin/prices" class="admin-form">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <% courses.forEach(function (c) { %>
+          <label>
+            <%= c.name %>
+            <input type="text" name="price_<%= c.id %>" value="<%= c.price || '' %>" placeholder="e.g. $150" />
+          </label>
+        <% }) %>
+        <button type="submit" class="btn btn-primary">Save Prices</button>
+      </form>
+
+      <hr style="border:none;border-top:1px solid var(--border);margin:28px 0" />
+
       <p class="admin-sub">
-        Edit courses in JSON format. Keep the structure intact — each course needs
+        Advanced: edit the full course list in JSON format. Each course needs
         <code>id</code>, <code>name</code>, <code>intro</code>,
         <code>focuses</code> (a list of strings), <code>experience</code>,
-        <code>firearm</code>, <code>ammunition</code>, and <code>minimumAge</code>.
+        <code>firearm</code>, <code>ammunition</code>, <code>price</code>, and <code>minimumAge</code>.
       </p>
       <form method="post" action="/admin/courses" class="admin-form">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
@@ -188,6 +206,96 @@
         </table>
       <% } else { %>
         <p class="admin-sub">No appointments booked yet.</p>
+      <% } %>
+    </section>
+
+    <!-- Events (owner-created calendar) -->
+    <section class="admin-section" id="section-events">
+      <h2>Manage Events</h2>
+      <form method="post" action="/admin/events" class="admin-form">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <label>
+          Event title
+          <input type="text" name="title" required />
+        </label>
+        <label>
+          Link to course (optional)
+          <select name="course_id">
+            <option value="">— Not linked —</option>
+            <% courses.forEach(function (c) { %>
+              <option value="<%= c.id %>"><%= c.name %></option>
+            <% }) %>
+          </select>
+        </label>
+        <label>
+          Starts at
+          <input type="datetime-local" name="starts_at" required />
+        </label>
+        <label>
+          Ends at (optional)
+          <input type="datetime-local" name="ends_at" />
+        </label>
+        <label>
+          Location
+          <input type="text" name="location" />
+        </label>
+        <label>
+          Price (e.g. "$150")
+          <input type="text" name="price" />
+        </label>
+        <label>
+          Description
+          <textarea name="description" rows="3"></textarea>
+        </label>
+        <button type="submit" class="btn btn-primary">Add Event</button>
+      </form>
+
+      <% if (events && events.length) { %>
+        <table class="admin-table" style="margin-top:20px">
+          <thead>
+            <tr><th>Title</th><th>Starts</th><th>Course</th><th></th></tr>
+          </thead>
+          <tbody>
+            <% events.forEach(function (e) { %>
+              <tr>
+                <td><%= e.title %></td>
+                <td><%= new Date(e.starts_at).toLocaleString() %></td>
+                <td><%= e.course_name || '—' %></td>
+                <td>
+                  <form method="post" action="/admin/events/delete" class="inline-form">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                    <input type="hidden" name="id" value="<%= e.id %>" />
+                    <button type="submit" class="btn btn-ghost btn-sm">Delete</button>
+                  </form>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      <% } %>
+    </section>
+
+    <!-- Images (drag-and-drop slideshow) -->
+    <section class="admin-section" id="section-images">
+      <h2>Slideshow Images</h2>
+      <p class="admin-sub">Drag and drop images here to add them to the homepage slideshow, or click to browse.</p>
+      <input type="hidden" id="csrf-token" value="<%= csrfToken %>" />
+      <div class="dropzone" id="image-dropzone">
+        <p>Drop images here</p>
+        <p class="admin-sub" style="margin:0">or click to select files</p>
+        <input type="file" id="image-file-input" accept="image/*" multiple style="display:none" />
+      </div>
+
+      <div class="image-thumbs" id="image-thumbs">
+        <% images.forEach(function (img) { %>
+          <div class="image-thumb">
+            <img src="/image/<%= img.id %>" alt="<%= img.filename %>" />
+            <button class="remove-img" data-id="<%= img.id %>" title="Remove">&times;</button>
+          </div>
+        <% }) %>
+      </div>
+      <% if (!images.length) { %>
+        <p class="admin-sub">No images yet.</p>
       <% } %>
     </section>
   </main>
