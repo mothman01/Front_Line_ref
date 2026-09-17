@@ -85,6 +85,15 @@ app.use((req, res, next) => {
   next();
 });
 
+// Lightweight page-view tracking (GET page requests only, not assets/assets).
+const { recordView } = require('./lib/views');
+app.use((req, res, next) => {
+  if (req.method === 'GET' && !req.path.startsWith('/image') && req.accepts('html')) {
+    recordView(req.path).catch(() => {});
+  }
+  next();
+});
+
 // Route handlers
 app.use('/', require('./routes/public'));
 app.use('/admin', require('./routes/admin'));

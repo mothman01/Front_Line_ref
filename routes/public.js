@@ -53,7 +53,10 @@ router.get('/', async (req, res) => {
 });
 
 router.get('/biography', async (req, res) => {
-  res.render('biography', await pageData('biography'));
+  const data = await pageData('biography');
+  const { getProfileImage } = require('../lib/images');
+  data.profileImage = await getProfileImage();
+  res.render('biography', data);
 });
 
 router.get('/about', async (req, res) => {

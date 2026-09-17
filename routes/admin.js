@@ -22,6 +22,8 @@ const {
 } = require('../lib/appointments');
 const { createEvent, listEvents, deleteEvent } = require('../lib/events');
 const { listImages, saveImage, deleteImage } = require('../lib/images');
+const { getViewCounts } = require('../lib/views');
+const { sanitizeHtml } = require('../lib/sanitize');
 
 // Login rate limiting (brute-force protection).
 const loginLimiter = rateLimit({
@@ -68,7 +70,7 @@ router.post('/logout', requireAuth, (req, res) => {
 
 // ---- Dashboard ------------------------------------------------------------
 router.get('/', requireAuth, async (req, res) => {
-  const validSections = ['bio', 'courses', 'safety', 'waivers', 'calendar', 'events', 'images'];
+  const validSections = ['bio', 'courses', 'safety', 'waivers', 'calendar', 'events', 'images', 'views'];
   const section = validSections.includes(req.query.section) ? req.query.section : 'bio';
 
   const courses = JSON.parse((await getContent('courses')) || '[]');
@@ -83,8 +85,10 @@ router.get('/', requireAuth, async (req, res) => {
     waiverCount: await countWaivers(),
     appointments: await listAppointments(),
     events: await listEvents(),
-    images: await listImages(),
+    images: await listImages('slideshow'),
+    profileImage: await listImages('profile').then((l) => l[0] || null),
     courses,
+    viewCounts: await getViewCounts(),
   };
 
   res.render('admin', data);
@@ -102,11 +106,29 @@ router.post('/content', requireAuth, async (req, res) => {
 
   for (const key of allowed) {
     if (key in req.body) {
-      await setContent(key, req.body[key]);
+      let value = req.body[key];
+      // Sanitize rich-text fields to prevent stored XSS.
+      if (key === 'bio_body' || key === 'about_body') {
+        value = sanitizeHtml(value);
+      }
+      await setContent(key, value);
     }
   }
 
   res.redirect('/admin?section=bio&saved=1');
+});
+
+// ---- Profile picture upload ------------------------------------------------
+router.post('/profile-image', requireAuth, async (req, res) => {
+  const { filename, mimeType, dataUrl } = req.body;
+  if (!filename || !mimeType || !dataUrl) {
+    return res.status(400).json({ error: 'Missing image data.' });
+  }
+  if (!mimeType.startsWith('image/')) {
+    return res.status(400).json({ error: 'Only images are allowed.' });
+  }
+  const img = await saveImage({ filename, mimeType, dataUrl, category: 'profile' });
+  res.json({ ok: true, id: img.id });
 });
 
 // ---- Safety rules editing -------------------------------------------------
@@ -282,8 +304,10 @@ async function renderAdmin(res, req, section, extra = {}) {
     waiverCount: await countWaivers(),
     appointments: await listAppointments(),
     events: await listEvents(),
-    images: await listImages(),
+    images: await listImages('slideshow'),
+    profileImage: await listImages('profile').then((l) => l[0] || null),
     courses: JSON.parse((await getContent('courses')) || '[]'),
+    viewCounts: await getViewCounts(),
   };
   res.render('admin', { ...data, ...extra });
 }

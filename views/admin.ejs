@@ -21,6 +21,7 @@
         <a href="/admin?section=calendar" class="<%= section === 'calendar' ? 'active' : '' %>">Appointments</a>
         <a href="/admin?section=events" class="<%= section === 'events' ? 'active' : '' %>">Events</a>
         <a href="/admin?section=images" class="<%= section === 'images' ? 'active' : '' %>">Images</a>
+        <a href="/admin?section=views" class="<%= section === 'views' ? 'active' : '' %>">Views</a>
         <a href="/admin/account">Account</a>
         <form method="post" action="/admin/logout" class="inline-form">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
@@ -47,7 +48,25 @@
     <!-- Biography & About -->
     <section class="admin-section" id="section-bio">
       <h2>Biography &amp; About</h2>
-      <form method="post" action="/admin/content" class="admin-form">
+
+      <!-- Profile picture -->
+      <h3 style="margin-top:4px">Profile Picture</h3>
+      <div class="profile-upload">
+        <% if (profileImage) { %>
+          <img class="profile-preview" src="/image/<%= profileImage.id %>" alt="Profile" />
+        <% } else { %>
+          <div class="profile-preview profile-preview-empty">No photo yet</div>
+        <% } %>
+        <div class="profile-upload-actions">
+          <input type="hidden" id="profile-csrf" value="<%= csrfToken %>" />
+          <input type="file" id="profile-file-input" accept="image/*" style="display:none" />
+          <button type="button" class="btn btn-ghost" id="profile-upload-btn">Upload Photo</button>
+        </div>
+      </div>
+
+      <hr style="border:none;border-top:1px solid var(--border);margin:28px 0" />
+
+      <form method="post" action="/admin/content" class="admin-form" id="content-form">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
         <label>
           Name
@@ -57,21 +76,43 @@
           Title
           <input type="text" name="bio_title" value="<%= content.bio_title || '' %>" />
         </label>
-        <label>
-          Biography (HTML allowed)
-          <textarea name="bio_body" rows="14"><%= content.bio_body || '' %></textarea>
-        </label>
-        <label>
-          About / Company Info (HTML allowed)
-          <textarea name="about_body" rows="12"><%= content.about_body || '' %></textarea>
-        </label>
+
+        <label>Biography</label>
+        <div class="rich-editor">
+          <div class="rich-toolbar" data-target="bio_body_editor">
+            <button type="button" data-cmd="bold" title="Bold"><strong>B</strong></button>
+            <button type="button" data-cmd="italic" title="Italic"><em>I</em></button>
+            <button type="button" data-cmd="underline" title="Underline"><u>U</u></button>
+            <button type="button" data-cmd="insertUnorderedList" title="Bullet list">&bull;&nbsp;List</button>
+            <button type="button" data-cmd="insertOrderedList" title="Numbered list">1. List</button>
+            <button type="button" data-cmd="formatBlock" data-value="h3" title="Heading">H</button>
+            <button type="button" data-cmd="formatBlock" data-value="p" title="Paragraph">P</button>
+          </div>
+          <div class="rich-content" id="bio_body_editor" contenteditable="true"><%= content.bio_body || '' %></div>
+          <textarea name="bio_body" id="bio_body_textarea" rows="1" style="display:none"></textarea>
+        </div>
+
+        <label>About / Company Info</label>
+        <div class="rich-editor">
+          <div class="rich-toolbar" data-target="about_body_editor">
+            <button type="button" data-cmd="bold"><strong>B</strong></button>
+            <button type="button" data-cmd="italic"><em>I</em></button>
+            <button type="button" data-cmd="underline"><u>U</u></button>
+            <button type="button" data-cmd="insertUnorderedList">&bull;&nbsp;List</button>
+            <button type="button" data-cmd="insertOrderedList">1. List</button>
+            <button type="button" data-cmd="formatBlock" data-value="h3">H</button>
+            <button type="button" data-cmd="formatBlock" data-value="p">P</button>
+          </div>
+          <div class="rich-content" id="about_body_editor" contenteditable="true"><%= content.about_body || '' %></div>
+          <textarea name="about_body" id="about_body_textarea" rows="1" style="display:none"></textarea>
+        </div>
+
         <label>
           About Closing Line
           <input type="text" name="about_line" value="<%= content.about_line || '' %>" />
         </label>
         <button type="submit" class="btn btn-primary">Save Biography &amp; About</button>
       </form>
-      <p class="admin-sub">Tip: wrap paragraphs in <code>&lt;p&gt;...&lt;/p&gt;</code> tags.</p>
     </section>
 
     <!-- Courses -->
@@ -296,6 +337,25 @@
       </div>
       <% if (!images.length) { %>
         <p class="admin-sub">No images yet.</p>
+      <% } %>
+    </section>
+
+    <!-- Page Views -->
+    <section class="admin-section" id="section-views">
+      <h2>Page Views</h2>
+      <% if (viewCounts && Object.keys(viewCounts).length) { %>
+        <table class="admin-table">
+          <thead>
+            <tr><th>Page</th><th>Views</th></tr>
+          </thead>
+          <tbody>
+            <% Object.keys(viewCounts).forEach(function (path) { %>
+              <tr><td><%= path %></td><td><%= viewCounts[path] %></td></tr>
+            <% }) %>
+          </tbody>
+        </table>
+      <% } else { %>
+        <p class="admin-sub">No page views recorded yet.</p>
       <% } %>
     </section>
   </main>

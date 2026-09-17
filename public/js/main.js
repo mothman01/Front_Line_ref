@@ -101,3 +101,64 @@
     if (res.ok) location.reload();
   });
 })();
+
+// Rich-text editor (contenteditable) for bio/about
+(function () {
+  const editors = document.querySelectorAll('.rich-content');
+  if (!editors.length) return;
+
+  // Toolbar command handling
+  document.querySelectorAll('.rich-toolbar').forEach((toolbar) => {
+    toolbar.querySelectorAll('button').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const cmd = btn.dataset.cmd;
+        const value = btn.dataset.value || null;
+        const targetId = toolbar.dataset.target;
+        const editor = document.getElementById(targetId);
+        if (!editor) return;
+        editor.focus();
+        document.execCommand(cmd, false, value);
+      });
+    });
+  });
+
+  // On form submit, copy editor HTML into the hidden textarea.
+  const form = document.getElementById('content-form');
+  if (form) {
+    form.addEventListener('submit', () => {
+      const bioEditor = document.getElementById('bio_body_editor');
+      const bioTextarea = document.getElementById('bio_body_textarea');
+      if (bioEditor && bioTextarea) bioTextarea.value = bioEditor.innerHTML;
+
+      const aboutEditor = document.getElementById('about_body_editor');
+      const aboutTextarea = document.getElementById('about_body_textarea');
+      if (aboutEditor && aboutTextarea) aboutTextarea.value = aboutEditor.innerHTML;
+    });
+  }
+})();
+
+// Profile picture upload
+(function () {
+  const btn = document.getElementById('profile-upload-btn');
+  const input = document.getElementById('profile-file-input');
+  const csrf = document.getElementById('profile-csrf')?.value;
+  if (!btn || !input) return;
+
+  btn.addEventListener('click', () => input.click());
+  input.addEventListener('change', () => {
+    const file = input.files[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const res = await fetch('/admin/profile-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ _csrf: csrf, filename: file.name, mimeType: file.type, dataUrl: e.target.result }),
+      });
+      if (res.ok) location.reload();
+      else alert('Upload failed.');
+    };
+    reader.readAsDataURL(file);
+  });
+})();
