@@ -14,7 +14,7 @@ const {
   updateUsername,
 } = require('../lib/store');
 const { requireAuth } = require('../lib/auth');
-const { listWaivers, countWaivers, getWaiver } = require('../lib/waivers');
+const { listWaivers, countWaivers } = require('../lib/waivers');
 const {
   listAppointments,
   cancelAppointment,
@@ -24,6 +24,19 @@ const { createEvent, listEvents, deleteEvent } = require('../lib/events');
 const { listImages, saveImage, deleteImage } = require('../lib/images');
 const { getViewCounts } = require('../lib/views');
 const { sanitizeHtml } = require('../lib/sanitize');
+
+// Allowed image MIME types. SVG is deliberately excluded because it can
+// carry executable script content.
+const ALLOWED_IMAGE_TYPES = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+  'image/gif',
+]);
+
+function assertAllowedImage(mimeType) {
+  return ALLOWED_IMAGE_TYPES.has((mimeType || '').toLowerCase());
+}
 
 // Login rate limiting (brute-force protection).
 const loginLimiter = rateLimit({
@@ -47,18 +60,29 @@ router.post('/login', loginLimiter, async (req, res) => {
   const { username, password } = req.body;
   const user = await getUserByUsername((username || '').trim());
 
-  if (!user || !verifyPassword(user, password || '')) {
+  if (!user || !(await verifyPassword(user, password || ''))) {
     return res.status(401).render('admin-login', {
       error: 'Invalid username or password.',
     });
   }
 
-  req.session.authenticated = true;
-  req.session.userId = user.id;
-  req.session.username = user.username;
+  // Regenerate the session before marking the user authenticated to prevent
+  // session fixation (an attacker-provided session ID must not survive login).
+  req.session.regenerate((regenerateErr) => {
+    if (regenerateErr) {
+      console.error('Session regeneration failed:', regenerateErr);
+      return res.status(500).render('admin-login', {
+        error: 'Could not complete login. Please try again.',
+      });
+    }
 
-  req.session.save(() => {
-    res.redirect('/admin');
+    req.session.authenticated = true;
+    req.session.userId = user.id;
+    req.session.username = user.username;
+
+    req.session.save(() => {
+      res.redirect('/admin');
+    });
   });
 });
 
@@ -68,27 +92,46 @@ router.post('/logout', requireAuth, (req, res) => {
   });
 });
 
+// Loads all dashboard data in parallel (single round trip across independent
+// queries) rather than awaiting them one at a time.
+async function loadDashboardData() {
+  const [content, waivers, waiverCount, appointments, events, images, profileImages, coursesRaw, viewCounts] =
+    await Promise.all([
+      getAllContent(),
+      listWaivers(),
+      countWaivers(),
+      listAppointments(),
+      listEvents(),
+      listImages('slideshow'),
+      listImages('profile'),
+      getContent('courses'),
+      getViewCounts(),
+    ]);
+
+  return { content, waivers, waiverCount, appointments, events, images, profileImages, coursesRaw, viewCounts };
+}
+
 // ---- Dashboard ------------------------------------------------------------
 router.get('/', requireAuth, async (req, res) => {
   const validSections = ['bio', 'courses', 'safety', 'waivers', 'calendar', 'events', 'images', 'views'];
   const section = validSections.includes(req.query.section) ? req.query.section : 'bio';
 
-  const courses = JSON.parse((await getContent('courses')) || '[]');
+  const d = await loadDashboardData();
 
   const data = {
     section,
     saved: req.query.saved === '1',
-    content: await getAllContent(),
+    content: d.content,
     saveError: null,
     username: req.session.username,
-    waivers: await listWaivers(),
-    waiverCount: await countWaivers(),
-    appointments: await listAppointments(),
-    events: await listEvents(),
-    images: await listImages('slideshow'),
-    profileImage: await listImages('profile').then((l) => l[0] || null),
-    courses,
-    viewCounts: await getViewCounts(),
+    waivers: d.waivers,
+    waiverCount: d.waiverCount,
+    appointments: d.appointments,
+    events: d.events,
+    images: d.images,
+    profileImage: d.profileImages[0] || null,
+    courses: JSON.parse(d.coursesRaw || '[]'),
+    viewCounts: d.viewCounts,
   };
 
   res.render('admin', data);
@@ -127,6 +170,9 @@ router.post('/profile-image', requireAuth, async (req, res) => {
   if (!mimeType.startsWith('image/')) {
     return res.status(400).json({ error: 'Only images are allowed.' });
   }
+  if (!assertAllowedImage(mimeType)) {
+    return res.status(400).json({ error: 'Unsupported image type. Please upload PNG, JPEG, WebP, or GIF.' });
+  }
   const img = await saveImage({ filename, mimeType, dataUrl, category: 'profile' });
   res.json({ ok: true, id: img.id });
 });
@@ -156,18 +202,15 @@ router.post('/courses-form', requireAuth, async (req, res) => {
   const current = JSON.parse((await getContent('courses')) || '[]');
   const updated = current.map((course, idx) => {
     const p = (name) => req.body[`course_${idx}_${name}`];
-    const focusesRaw = p('focuses') || '';
+    const descriptionRaw = p('description') || '';
     return {
       ...course,
       id: p('id') || course.id,
       name: p('name') || course.name,
+      comingSoon: (p('comingSoon') || '').toString() === 'true',
       intro: p('intro') || course.intro,
-      focuses: focusesRaw.split('\n').map((s) => s.trim()).filter(Boolean),
-      experience: p('experience') || course.experience,
-      firearm: p('firearm') || course.firearm,
-      ammunition: p('ammunition') || course.ammunition,
-      price: (p('price') || '').trim(),
-      minimumAge: p('minimumAge') || course.minimumAge,
+      description: descriptionRaw.split('\n').map((s) => s.trim()).filter(Boolean),
+      prerequisite: (p('prerequisite') || '').trim(),
     };
   });
 
@@ -198,7 +241,11 @@ router.post('/appointments/cancel', requireAuth, async (req, res) => {
 });
 
 router.post('/appointments/confirm', requireAuth, async (req, res) => {
-  await confirmAppointment(req.body.id);
+  try {
+    await confirmAppointment(req.body.id);
+  } catch (err) {
+    console.error(err);
+  }
   res.redirect('/admin?section=calendar');
 });
 
@@ -246,6 +293,9 @@ router.post('/images', requireAuth, async (req, res) => {
   if (!mimeType.startsWith('image/')) {
     return res.status(400).json({ error: 'Only images are allowed.' });
   }
+  if (!assertAllowedImage(mimeType)) {
+    return res.status(400).json({ error: 'Unsupported image type. Please upload PNG, JPEG, WebP, or GIF.' });
+  }
   const img = await saveImage({ filename, mimeType, dataUrl });
   res.json({ ok: true, id: img.id });
 });
@@ -276,7 +326,7 @@ router.post('/account', requireAuth, async (req, res) => {
     });
   };
 
-  if (!user || !verifyPassword(user, currentPassword || '')) {
+  if (!user || !(await verifyPassword(user, currentPassword || ''))) {
     return renderAccount(null, 'Current password is incorrect.');
   }
 
@@ -306,20 +356,21 @@ router.post('/account', requireAuth, async (req, res) => {
 });
 
 async function renderAdmin(res, req, section, extra = {}) {
+  const d = await loadDashboardData();
   const data = {
     section,
     saved: false,
-    content: await getAllContent(),
+    content: d.content,
     saveError: null,
     username: req.session.username,
-    waivers: await listWaivers(),
-    waiverCount: await countWaivers(),
-    appointments: await listAppointments(),
-    events: await listEvents(),
-    images: await listImages('slideshow'),
-    profileImage: await listImages('profile').then((l) => l[0] || null),
-    courses: JSON.parse((await getContent('courses')) || '[]'),
-    viewCounts: await getViewCounts(),
+    waivers: d.waivers,
+    waiverCount: d.waiverCount,
+    appointments: d.appointments,
+    events: d.events,
+    images: d.images,
+    profileImage: d.profileImages[0] || null,
+    courses: JSON.parse(d.coursesRaw || '[]'),
+    viewCounts: d.viewCounts,
   };
   res.render('admin', { ...data, ...extra });
 }

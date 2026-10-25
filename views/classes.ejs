@@ -4,8 +4,8 @@
   <div class="container">
     <h1>Classes</h1>
     <p class="section-lede">
-      A progressive coaching program built around three stages: Foundations,
-      Refinement, and Applied Skills.
+      A progressive coaching program built on core marksmanship, applied
+      performance, and dynamic movement.
     </p>
   </div>
 </section>
@@ -15,23 +15,21 @@
     <div class="course-grid">
       <% content.courses.forEach((course) => { %>
         <article class="course-card">
-          <h2><%= course.name %></h2>
+          <div class="course-card-head">
+            <h2><%= course.name %></h2>
+            <% if (course.comingSoon) { %>
+              <span class="coming-soon-badge">Coming Soon</span>
+            <% } %>
+          </div>
           <p class="course-intro"><%= course.intro %></p>
 
-          <h4>Training Focuses On</h4>
-          <ul>
-            <% course.focuses.forEach((focus) => { %>
-              <li><%= focus %></li>
-            <% }) %>
-          </ul>
+          <% (course.description || []).forEach((para) => { %>
+            <p class="course-body"><%= para %></p>
+          <% }) %>
 
-          <dl class="course-details">
-            <div><dt>Experience</dt><dd><%= course.experience %></dd></div>
-            <div><dt>Firearm</dt><dd><%= course.firearm %></dd></div>
-            <div><dt>Ammunition</dt><dd><%= course.ammunition %></dd></div>
-            <div><dt>Price</dt><dd><%= course.price || 'Contact for pricing' %></dd></div>
-            <div><dt>Minimum age</dt><dd><%= course.minimumAge %></dd></div>
-          </dl>
+          <% if (course.prerequisite) { %>
+            <p class="course-prereq"><strong>Recommended prerequisite:</strong> <%= course.prerequisite %></p>
+          <% } %>
         </article>
       <% }) %>
     </div>

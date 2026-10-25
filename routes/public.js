@@ -1,8 +1,9 @@
 'use strict';
 
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const router = express.Router();
-const { getContent } = require('../lib/store');
+const { getContent, getAllContent } = require('../lib/store');
 const { defaultCourses, defaultSafetyRules } = require('../lib/defaults');
 const { listBlockedSlots, listAppointments } = require('../lib/appointments');
 const { listEvents } = require('../lib/events');
@@ -22,26 +23,28 @@ async function pageData(activePage) {
     safety: 'Safety Rules',
     classes: 'Classes',
   };
+  // One query fetches all content rows instead of ~8 sequential getContent calls.
+  const c = await getAllContent();
+  const or = (key, fallback) => c[key] ?? fallback;
   return {
     activePage,
     siteName: SITE_NAME,
     pageTitle: pageTitles[activePage] || '',
     tagline: 'Fundamentals First. Confidence Follows.',
     content: {
-      bioName: (await getContent('bio_name')) || 'Lucas Parrish',
-      bioTitle: (await getContent('bio_title')) || 'Founder & Lead Coach',
-      bioBody: (await getContent('bio_body')) || '<p>Biography content is being prepared.</p>',
-      aboutBody: (await getContent('about_body')) || '<p>About content is being prepared.</p>',
-      aboutLine: (await getContent('about_line')) || 'Fundamentals First. Confidence Follows.',
+      bioName: or('bio_name', 'Lucas Parrish'),
+      bioTitle: or('bio_title', 'Founder & Lead Coach'),
+      bioBody: or('bio_body', '<p>Biography content is being prepared.</p>'),
+      aboutBody: or('about_body', '<p>About content is being prepared.</p>'),
+      aboutLine: or('about_line', 'Fundamentals First. Confidence Follows.'),
       safetyIntro:
-        (await getContent('safety_intro')) ||
-        'Your safety and the safety of everyone on the range are the highest priorities at Front Line Refinement. Every participant must understand and follow these rules.',
-      safetyRules: JSON.parse(
-        (await getContent('safety_rules')) || JSON.stringify(defaultSafetyRules())
-      ),
+        or(
+          'safety_intro',
+          'Your safety and the safety of everyone on the range are the highest priorities at Front Line Refinement. Every participant must understand and follow these rules.'
+        ),
+      safetyRules: JSON.parse(c.safety_rules || JSON.stringify(defaultSafetyRules())),
       safetyClosing:
-        (await getContent('safety_closing')) ||
-        'No signed waiver. No firearm handling. No shooting. No exceptions.',
+        or('safety_closing', 'No signed waiver. No firearm handling. No shooting. No exceptions.'),
     },
   };
 }
@@ -90,6 +93,21 @@ router.get('/image/:id', async (req, res) => {
   res.send(buf);
 });
 
+// ---- Public-form spam protection ------------------------------------------
+// Rate-limit anonymous submissions so an attacker can't flood waiver records
+// or booking requests. Keyed by IP (the proxy's, via trust proxy) per-window.
+const publicFormLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 submissions per window per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) =>
+    res.status(429).render('error', {
+      status: 429,
+      message: 'Too many submissions. Please wait 15 minutes and try again.',
+    }),
+});
+
 // ---- Waiver ----------------------------------------------------------------
 
 router.get('/waiver', async (req, res) => {
@@ -104,7 +122,7 @@ router.get('/waiver', async (req, res) => {
   });
 });
 
-router.post('/waiver', async (req, res) => {
+router.post('/waiver', publicFormLimiter, async (req, res) => {
   const { full_name, email, phone, address, date_of_birth, signature } = req.body;
   const legal_attestation = req.body.legal_attestation === 'on' || req.body.legal_attestation === 'true';
 
@@ -157,11 +175,15 @@ router.get('/schedule', async (req, res) => {
   const appts = await listAppointments();
   const blocked = await listBlockedSlots();
   const events = await listEvents();
+  const courses = JSON.parse(
+    (await getContent('courses')) || JSON.stringify(defaultCourses())
+  );
   res.render('schedule', {
     activePage: 'schedule',
     siteName: SITE_NAME,
     pageTitle: 'Schedule a Session',
     content: { siteName: SITE_NAME },
+    courses,
     appointments: appts,
     events,
     blocked: blocked,
@@ -171,7 +193,7 @@ router.get('/schedule', async (req, res) => {
   });
 });
 
-router.post('/schedule', async (req, res) => {
+router.post('/schedule', publicFormLimiter, async (req, res) => {
   const { customer_name, email, phone, course, scheduled_at, notes } = req.body;
 
   const render = async (opts = {}) =>
@@ -180,6 +202,9 @@ router.post('/schedule', async (req, res) => {
       siteName: SITE_NAME,
       pageTitle: 'Schedule a Session',
       content: { siteName: SITE_NAME },
+      courses: JSON.parse(
+        (await getContent('courses')) || JSON.stringify(defaultCourses())
+      ),
       appointments: await listAppointments(),
       blocked: await listBlockedSlots(),
       success: false,
@@ -190,6 +215,21 @@ router.post('/schedule', async (req, res) => {
   if (!customer_name || !email || !course || !scheduled_at) {
     return render({
       error: 'Please provide your name, email, course, and a time.',
+      form: req.body,
+    });
+  }
+
+  // Reject past requests: the booking form should only accept future slots.
+  const requestedTime = new Date(scheduled_at);
+  if (Number.isNaN(requestedTime.getTime())) {
+    return render({
+      error: 'Please choose a valid date and time for your session.',
+      form: req.body,
+    });
+  }
+  if (requestedTime.getTime() <= Date.now()) {
+    return render({
+      error: 'That time has already passed. Please choose a future date and time.',
       form: req.body,
     });
   }
@@ -207,8 +247,13 @@ router.post('/schedule', async (req, res) => {
     return render({ success: true });
   } catch (err) {
     console.error(err);
+    // Show a fixed, friendly message for expected slot conflicts, but never
+    // surface raw database error text to visitors.
+    const isConflict = err && err.message === 'That time slot is already booked.';
     return render({
-      error: err.message || 'Could not book that time. Please try again.',
+      error: isConflict
+        ? 'That time slot is already booked. Please choose another time.'
+        : 'Could not book that time. Please try again.',
       form: req.body,
     });
   }

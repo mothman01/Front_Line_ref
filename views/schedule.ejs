@@ -38,12 +38,9 @@
           Course
           <select name="course" required>
             <option value="">— Select a course —</option>
-            <option value="Pistol Foundations">Pistol Foundations</option>
-            <option value="Carbine Foundations">Carbine Foundations</option>
-            <option value="Pistol Refinement">Pistol Refinement</option>
-            <option value="Carbine Refinement">Carbine Refinement</option>
-            <option value="Applied Movement and Defensive Skills">Applied Movement and Defensive Skills</option>
-            <option value="Home-Defense Scenario and Emergency Response">Home-Defense Scenario and Emergency Response</option>
+            <% (courses || []).forEach(function (c) { %>
+              <option value="<%= c.name %>"><%= c.name %></option>
+            <% }) %>
           </select>
         </label>
         <label>

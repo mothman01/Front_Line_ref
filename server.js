@@ -24,10 +24,23 @@ app.set('trust proxy', 1);
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// Security headers
+// Security headers. Content-Security-Policy blocks inline scripts and restricts
+// script sources to same-origin, while inline `style="..."` attributes on the
+// templates still need `'unsafe-inline'` for styles (no scripts are inlined).
 app.use(
   helmet({
-    contentSecurityPolicy: false, // EJS templates inline styles; configure later if needed
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        'script-src': ["'self'"],
+        'style-src': ["'self'", "'unsafe-inline'"],
+        'img-src': ["'self'", 'data:'],
+        // allow same-origin form posts (CSRF-protected) and image data URLs
+        'form-action': ["'self'"],
+        'object-src': ["'none'"],
+        'base-uri': ["'self'"],
+      },
+    },
   })
 );
 
@@ -86,7 +99,7 @@ app.use((req, res, next) => {
 });
 
 // Lightweight page-view tracking (GET page requests only, not assets/assets).
-const { recordView } = require('./lib/views');
+const { recordView, prunePageViews } = require('./lib/views');
 app.use((req, res, next) => {
   if (req.method === 'GET' && !req.path.startsWith('/image') && req.accepts('html')) {
     recordView(req.path).catch(() => {});
@@ -119,6 +132,7 @@ app.use((err, req, res, next) => {
 // exist before listening. This is async, so we wrap startup.
 async function boot() {
   await initSchema();
+  await prunePageViews(); // keep the page_views table from growing unbounded
   const createdAdmin = await ensureAdminUser();
   await seedDefaultContent();
 

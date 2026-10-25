@@ -130,6 +130,13 @@ p {
   flex-shrink: 0;
 }
 
+.brand-logo {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
 .brand-mark-lg {
   width: 64px;
   height: 64px;
@@ -505,8 +512,42 @@ p {
   font-size: 1.5rem;
 }
 
+.course-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.coming-soon-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
 .course-intro {
   color: var(--text-muted);
+}
+
+.course-body {
+  color: var(--text);
+  margin-top: 12px;
+}
+
+.course-prereq {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.92rem;
 }
 
 .course-card h4 {
@@ -589,6 +630,14 @@ p {
 .footer-brand {
   font-weight: 700;
   margin: 0;
+}
+
+.footer-logo {
+  display: block;
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  margin-bottom: 12px;
 }
 
 .footer-tagline {

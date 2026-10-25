@@ -1,0 +1,20 @@
+[Unit]
+Description=Front Line Refinement website (Node.js)
+After=network.target
+
+[Service]
+WorkingDirectory=/home/eigen/flr
+ExecStart=/usr/bin/node /home/eigen/flr/server.js
+Restart=on-failure
+RestartSec=3
+
+# Production environment (edit these values before starting the service)
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=DATABASE_URL=postgresql://REPLACE_ME
+Environment=ADMIN_USERNAME=admin
+Environment=ADMIN_PASSWORD=REPLACE_ME
+Environment=SESSION_SECRET=REPLACE_ME
+
+[Install]
+WantedBy=default.target

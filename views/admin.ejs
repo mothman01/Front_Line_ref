@@ -131,34 +131,22 @@
               Course name
               <input type="text" name="course_<%= idx %>_name" value="<%= c.name %>" />
             </label>
-            <label>
-              Short introduction
-              <textarea name="course_<%= idx %>_intro" rows="2"><%= c.intro %></textarea>
+            <label class="checkbox-row">
+              <input type="checkbox" name="course_<%= idx %>_comingSoon" value="true" <%= c.comingSoon ? 'checked' : '' %> />
+              Mark as "Coming Soon"
             </label>
             <label>
-              Focus points (one per line)
-              <textarea name="course_<%= idx %>_focuses" rows="5"><%= (c.focuses || []).join('\n') %></textarea>
+              Introduction
+              <textarea name="course_<%= idx %>_intro" rows="3"><%= c.intro %></textarea>
+            </label>
+            <label>
+              Description (one paragraph per line)
+              <textarea name="course_<%= idx %>_description" rows="6"><%= (c.description || []).join('\n') %></textarea>
             </label>
             <div class="form-grid">
               <label>
-                Experience required
-                <input type="text" name="course_<%= idx %>_experience" value="<%= c.experience %>" />
-              </label>
-              <label>
-                Firearm
-                <input type="text" name="course_<%= idx %>_firearm" value="<%= c.firearm %>" />
-              </label>
-              <label>
-                Ammunition
-                <input type="text" name="course_<%= idx %>_ammunition" value="<%= c.ammunition %>" />
-              </label>
-              <label>
-                Price
-                <input type="text" name="course_<%= idx %>_price" value="<%= c.price || '' %>" placeholder="e.g. $150" />
-              </label>
-              <label>
-                Minimum age
-                <input type="text" name="course_<%= idx %>_minimumAge" value="<%= c.minimumAge %>" />
+                Recommended prerequisite
+                <input type="text" name="course_<%= idx %>_prerequisite" value="<%= c.prerequisite || '' %>" />
               </label>
             </div>
           </div>
