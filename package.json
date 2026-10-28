@@ -21,6 +21,7 @@
     "express-session": "^1.18.0",
     "helmet": "^8.3.0",
     "pg": "^8.23.0",
-    "sanitize-html": "^2.18.1"
+    "sanitize-html": "^2.18.1",
+    "stripe": "^17.7.0"
   }
 }

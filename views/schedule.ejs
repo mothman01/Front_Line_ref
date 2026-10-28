@@ -2,13 +2,68 @@
 
 <section class="page-hero">
   <div class="container">
-    <h1>Schedule a Session</h1>
-    <p class="section-lede">Book a coaching session. We'll confirm your appointment by email.</p>
+    <h1>Class Calendar</h1>
+    <p class="section-lede">Pick a class day to see the details and reserve your seat. Seat counts update live.</p>
   </div>
 </section>
 
 <section class="section">
+  <div class="container">
+    <div class="calendar" data-month="<%= month.key %>">
+      <div class="calendar-head">
+        <a href="/schedule?month=<%= month.prev %>" class="btn btn-ghost btn-sm" aria-label="Previous month">&larr;</a>
+        <h2><%= month.label %></h2>
+        <a href="/schedule?month=<%= month.next %>" class="btn btn-ghost btn-sm" aria-label="Next month">&rarr;</a>
+      </div>
+      <% if (!month.isCurrentMonth) { %>
+        <p class="calendar-today-link"><a href="/schedule" class="text-link">Back to this month</a></p>
+      <% } %>
+
+      <div class="calendar-grid" role="grid">
+        <% ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(function (d) { %>
+          <div class="calendar-dow" role="columnheader"><%= d %></div>
+        <% }) %>
+        <% month.cells.forEach(function (cell) { %>
+          <% if (!cell) { %>
+            <div class="calendar-cell is-empty"></div>
+          <% } else { %>
+            <% const dayEvents = byDay[cell.key] || []; %>
+            <div class="calendar-cell<%= cell.isToday ? ' is-today' : '' %><%= cell.isPast ? ' is-past' : '' %><%= dayEvents.length ? ' has-classes' : '' %>" role="gridcell">
+              <span class="calendar-daynum"><%= cell.day %><% if (cell.isToday) { %><span class="today-label">Today</span><% } %></span>
+              <% dayEvents.forEach(function (e) { %>
+                <a href="/class/<%= e.id %>" class="calendar-class<%= e.seats_left === 0 ? ' is-full' : '' %><%= e.past ? ' is-over' : '' %>">
+                  <span class="calendar-class-time"><%= e.time %></span>
+                  <span class="calendar-class-title"><%= e.title %></span>
+                  <span class="calendar-class-seats" data-seat-id="<%= e.id %>" data-seat-format="long"><%= e.past ? 'Ended' : (e.seats_left === 0 ? 'Full' : e.seats_left + ' of ' + e.capacity + ' seats left') %></span>
+                </a>
+              <% }) %>
+            </div>
+          <% } %>
+        <% }) %>
+      </div>
+    </div>
+
+    <div class="month-list">
+      <h3>Classes in <%= month.label %></h3>
+      <% if (monthEvents.length) { %>
+        <% monthEvents.forEach(function (e) { %>
+          <a href="/class/<%= e.id %>" class="month-list-item<%= e.past ? ' is-over' : '' %>">
+            <span class="month-list-date"><%= new Date(e.day + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }) %> &middot; <%= e.time %></span>
+            <span class="month-list-title"><%= e.title %><% if (e.price) { %> &middot; <%= e.price %><% } %></span>
+            <span class="seat-pill<%= e.seats_left === 0 ? ' is-full' : '' %>" data-seat-id="<%= e.id %>"><%= e.past ? 'Ended' : (e.seats_left === 0 ? 'Full' : e.seats_left + ' seats left') %></span>
+          </a>
+        <% }) %>
+      <% } else { %>
+        <p class="muted">No classes scheduled this month yet. Check the next month or request a private session below.</p>
+      <% } %>
+    </div>
+  </div>
+</section>
+
+<section class="section section-alt">
   <div class="container narrow">
+    <h2>Request a Private Session</h2>
+    <p class="section-lede">Prefer one-on-one coaching? Send a request and we'll confirm by email.</p>
     <% if (success) { %>
       <div class="alert alert-success">
         Your appointment request was received. Please complete the <a href="/waiver">liability waiver</a> before your session.
@@ -55,40 +110,6 @@
         <button type="submit" class="btn btn-primary">Request Appointment</button>
       </form>
 
-    <% } %>
-
-    <% if (events && events.length) { %>
-      <div class="events-list">
-        <h3>Upcoming Classes &amp; Events</h3>
-        <% events.forEach(function (e) { %>
-          <div class="event-item">
-            <h4><%= e.title %></h4>
-            <p class="event-meta">
-              <strong><%= new Date(e.starts_at).toLocaleString() %></strong>
-              <% if (e.ends_at) { %> – <%= new Date(e.ends_at).toLocaleString() %><% } %>
-              <% if (e.location) { %> &middot; <%= e.location %><% } %>
-              <% if (e.course_name) { %> &middot; <%= e.course_name %><% } %>
-              <% if (e.price) { %> &middot; <%= e.price %><% } %>
-            </p>
-            <% if (e.description) { %><p><%= e.description %></p><% } %>
-          </div>
-        <% }) %>
-      </div>
-    <% } %>
-
-    <% if (appointments && appointments.length) { %>
-      <div class="calendar-list">
-        <h3>Upcoming Appointments</h3>
-        <ul>
-          <% appointments.forEach(function (a) { %>
-            <li>
-              <strong><%= new Date(a.scheduled_at).toLocaleString() %></strong>
-              — <%= a.course %>
-              <span class="muted">(<%= a.status === 'cancelled' ? 'cancelled' : 'open' %>)</span>
-            </li>
-          <% }) %>
-        </ul>
-      </div>
     <% } %>
   </div>
 </section>

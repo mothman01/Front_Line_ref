@@ -1,0 +1,36 @@
+<%- include('partials/header') %>
+
+<section class="page-hero">
+  <div class="container">
+    <h1><%= outcome === 'paid' ? "You're Registered" : 'Payment Processing' %></h1>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container narrow">
+    <% if (!reg) { %>
+      <div class="alert alert-error">We couldn't find that registration. If you were charged, please contact us with your receipt from Stripe.</div>
+    <% } else if (outcome === 'paid') { %>
+      <div class="alert alert-success">
+        Payment received. Your <%= reg.seats === 1 ? 'seat is' : reg.seats + ' seats are' %> reserved.
+      </div>
+      <dl class="class-facts">
+        <div><dt>Class</dt><dd><%= ev ? ev.title : '' %></dd></div>
+        <% if (when) { %><div><dt>When</dt><dd><%= when %></dd></div><% } %>
+        <% if (ev && ev.location) { %><div><dt>Location</dt><dd><%= ev.location %></dd></div><% } %>
+        <div><dt>Name</dt><dd><%= reg.customer_name %></dd></div>
+        <div><dt>Total paid</dt><dd><%= total %></dd></div>
+      </dl>
+      <p>A receipt has been emailed to <strong><%= reg.email %></strong> by Stripe.</p>
+      <div class="safety-closing">
+        <p>Before class: complete the <a href="/waiver">liability waiver</a>. No signed waiver, no shooting.</p>
+      </div>
+    <% } else { %>
+      <div class="alert alert-success">Your payment is being processed. Your seat is held and this page will confirm once Stripe finishes.</div>
+      <p><a href="" class="btn btn-ghost">Refresh</a></p>
+    <% } %>
+    <p style="margin-top:24px"><a href="/schedule" class="text-link">&larr; Back to the class calendar</a></p>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

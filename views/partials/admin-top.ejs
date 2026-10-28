@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title><%= sections[section] ? sections[section].title : 'Account' %> — FLR Admin</title>
+  <link rel="stylesheet" href="/css/style.css?v=<%= assetVersion %>" />
+</head>
+<body class="admin-body">
+<%
+  const navGroups = [
+    { label: null, items: ['overview'] },
+    { label: 'Website', items: ['bio', 'courses', 'safety', 'images'] },
+    { label: 'Classes', items: ['events', 'checkout'] },
+    { label: 'Customers', items: ['calendar', 'waivers'] },
+    { label: 'Insights', items: ['views', 'preview'] },
+  ];
+%>
+  <div class="admin-shell">
+    <aside class="admin-sidebar">
+      <a href="/admin" class="admin-brand">
+        <img src="/flrlogo.png" alt="" class="admin-brand-logo" />
+        <span>
+          <span class="admin-brand-name">Front Line Refinement</span>
+          <span class="admin-brand-sub">Owner Admin</span>
+        </span>
+      </a>
+      <nav class="admin-sidenav" aria-label="Admin sections">
+        <% navGroups.forEach(function (g) { %>
+          <div class="admin-sidenav-group">
+            <% if (g.label) { %><p class="admin-sidenav-label"><%= g.label %></p><% } %>
+            <% g.items.forEach(function (key) { %>
+              <a href="/admin?section=<%= key %>" class="<%= section === key ? 'active' : '' %>"<%- section === key ? ' aria-current="page"' : '' %>><%= sections[key].title %></a>
+            <% }) %>
+          </div>
+        <% }) %>
+        <div class="admin-sidenav-group admin-sidenav-footer">
+          <a href="/admin/account" class="<%= section === 'account' ? 'active' : '' %>">Account</a>
+          <a href="/" target="_blank" rel="noopener">View Live Site &nearr;</a>
+          <form method="post" action="/admin/logout">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <button type="submit" class="admin-logout">Log Out</button>
+          </form>
+        </div>
+      </nav>
+    </aside>
+
+    <main class="admin-content">
+      <header class="admin-pagehead">
+        <div>
+          <h1><%= sections[section] ? sections[section].title : 'Account Settings' %></h1>
+          <p class="admin-sub"><%= sections[section] ? sections[section].sub : 'Change your admin username or password.' %></p>
+        </div>
+        <span class="admin-username">Signed in as <strong><%= username %></strong></span>
+      </header>

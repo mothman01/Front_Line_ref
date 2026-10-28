@@ -15,12 +15,19 @@
     <div class="course-grid">
       <% content.courses.forEach((course) => { %>
         <article class="course-card">
+          <% const photo = coursePhotos[course.id]; %>
+          <% if (photo) { %>
+            <img class="course-card-photo" src="/image/<%= photo.id %>" alt="<%= course.name %>" loading="lazy" />
+          <% } %>
           <div class="course-card-head">
             <h2><%= course.name %></h2>
             <% if (course.comingSoon) { %>
               <span class="coming-soon-badge">Coming Soon</span>
             <% } %>
           </div>
+          <% if (course.priceCents != null) { %>
+            <p class="course-price"><%= formatCents(course.priceCents) %> <span>per seat</span></p>
+          <% } %>
           <p class="course-intro"><%= course.intro %></p>
 
           <% (course.description || []).forEach((para) => { %>
@@ -29,6 +36,19 @@
 
           <% if (course.prerequisite) { %>
             <p class="course-prereq"><strong>Recommended prerequisite:</strong> <%= course.prerequisite %></p>
+          <% } %>
+
+          <% const sessions = courseSessions[course.id] || []; %>
+          <% if (sessions.length) { %>
+            <div class="course-sessions">
+              <p class="course-sessions-label">Upcoming dates</p>
+              <% sessions.forEach((e) => { %>
+                <a href="/class/<%= e.id %>" class="course-session-link">
+                  <span><%= formatDateTime(e.starts_at, { weekday: 'short', month: 'short', year: undefined }) %></span>
+                  <span class="seat-pill<%= e.seats_left === 0 ? ' is-full' : '' %>" data-seat-id="<%= e.id %>"><%= e.seats_left === 0 ? 'Full' : e.seats_left + ' seats left' %></span>
+                </a>
+              <% }) %>
+            </div>
           <% } %>
         </article>
       <% }) %>

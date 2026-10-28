@@ -43,6 +43,24 @@ Set these environment variables:
 | `ADMIN_USERNAME`  | Initial admin username (default `admin`)                       |
 | `PORT`            | Port (default `3000`; set automatically by most hosts)         |
 
+| `STRIPE_SECRET_KEY`     | Stripe secret key for online class checkout (`sk_test_...` / `sk_live_...`) |
+| `STRIPE_WEBHOOK_SECRET` | Signing secret for the `/stripe/webhook` endpoint (`whsec_...`) |
+| `SITE_URL`              | Public URL, used for Stripe return links (e.g. `https://frontlinerefinement.com`) |
+| `SITE_TIMEZONE`         | Timezone for the calendar and class times (default `America/Chicago`) |
+
+### Online class checkout (Stripe)
+
+1. In the Stripe dashboard, copy your **secret key** into `STRIPE_SECRET_KEY`.
+2. Under Developers → Webhooks, add an endpoint `https://<your-domain>/stripe/webhook`
+   listening for `checkout.session.completed`, `checkout.session.expired`,
+   `checkout.session.async_payment_succeeded`, and `checkout.session.async_payment_failed`.
+   Copy its signing secret into `STRIPE_WEBHOOK_SECRET`.
+3. Restart the app, then turn on **Admin → Online Checkout**.
+
+Seats are held for 30 minutes while a customer is on Stripe's checkout page and released
+automatically if they cancel or the session expires. Refunds are issued from the Stripe dashboard;
+cancelling a registration in the admin panel frees its seats.
+
 > ⚠️ In production, the app refuses to start unless `DATABASE_URL`, `ADMIN_PASSWORD`, and `SESSION_SECRET` are set. This prevents insecure defaults and data loss.
 
 ## Deployment

@@ -1,13 +1,11 @@
 'use strict';
 
-const express = require('express');
 const rateLimit = require('express-rate-limit');
-const router = express.Router();
+const router = require('../lib/async-router').Router();
 const { getContent, getAllContent } = require('../lib/store');
 const { defaultCourses, defaultSafetyRules } = require('../lib/defaults');
-const { listBlockedSlots, listAppointments } = require('../lib/appointments');
-const { listEvents } = require('../lib/events');
 const { listImages } = require('../lib/images');
+const { sanitizeHtml } = require('../lib/sanitize');
 
 const SITE_NAME = 'Front Line Refinement';
 
@@ -34,8 +32,8 @@ async function pageData(activePage) {
     content: {
       bioName: or('bio_name', 'Lucas Parrish'),
       bioTitle: or('bio_title', 'Founder & Lead Coach'),
-      bioBody: or('bio_body', '<p>Biography content is being prepared.</p>'),
-      aboutBody: or('about_body', '<p>About content is being prepared.</p>'),
+      bioBody: sanitizeHtml(or('bio_body', '<p>Biography content is being prepared.</p>')),
+      aboutBody: sanitizeHtml(or('about_body', '<p>About content is being prepared.</p>')),
       aboutLine: or('about_line', 'Fundamentals First. Confidence Follows.'),
       safetyIntro:
         or(
@@ -75,22 +73,36 @@ router.get('/classes', async (req, res) => {
   data.content.courses = JSON.parse(
     (await getContent('courses')) || JSON.stringify(defaultCourses())
   );
+  const { listEvents } = require('../lib/events');
+  const { formatCents } = require('../lib/payments');
+  const { formatDateTime } = require('../lib/time');
+  const { firstImagesByPrefix } = require('../lib/images');
+  const [upcoming, photos] = await Promise.all([
+    listEvents({ from: new Date() }),
+    firstImagesByPrefix('course:'),
+  ]);
+  data.coursePhotos = {};
+  data.courseSessions = {};
+  for (const c of data.content.courses) {
+    data.coursePhotos[c.id] = photos[`course:${c.id}`] || null;
+    data.courseSessions[c.id] = upcoming.filter((e) => e.course_id === c.id).slice(0, 3);
+  }
+  data.formatCents = formatCents;
+  data.formatDateTime = formatDateTime;
   res.render('classes', data);
 });
 
 // Serve a slideshow image by ID (stored in Postgres as a data URL).
+// Image IDs are never reused for different content, so browsers may cache
+// them forever; the server also keeps decoded bytes in memory.
 router.get('/image/:id', async (req, res) => {
-  const { getImage } = require('../lib/images');
-  const img = await getImage(req.params.id);
+  if (!/^\d{1,10}$/.test(req.params.id)) return res.status(404).end();
+  const { getDecodedImage } = require('../lib/images');
+  const img = await getDecodedImage(req.params.id);
   if (!img) return res.status(404).end();
-  // img.data is a data URL like "data:image/jpeg;base64,..."
-  const match = img.data.match(/^data:([^;]+);base64,(.*)$/);
-  if (!match) return res.status(500).end();
-  const mimeType = match[1];
-  const buf = Buffer.from(match[2], 'base64');
-  res.set('Content-Type', mimeType);
-  res.set('Cache-Control', 'public, max-age=86400');
-  res.send(buf);
+  res.set('Content-Type', img.type);
+  res.set('Cache-Control', 'public, max-age=31536000, immutable');
+  res.send(img.buf);
 });
 
 // ---- Public-form spam protection ------------------------------------------
@@ -171,46 +183,31 @@ router.post('/waiver', publicFormLimiter, async (req, res) => {
 
 // ---- Scheduling / calendar -------------------------------------------------
 
-router.get('/schedule', async (req, res) => {
-  const appts = await listAppointments();
-  const blocked = await listBlockedSlots();
-  const events = await listEvents();
-  const courses = JSON.parse(
-    (await getContent('courses')) || JSON.stringify(defaultCourses())
-  );
+async function renderSchedule(req, res, opts = {}) {
+  const { calendarData } = require('./checkout');
+  const cal = await calendarData(req.query.month);
   res.render('schedule', {
     activePage: 'schedule',
     siteName: SITE_NAME,
-    pageTitle: 'Schedule a Session',
+    pageTitle: 'Class Calendar',
     content: { siteName: SITE_NAME },
-    courses,
-    appointments: appts,
-    events,
-    blocked: blocked,
+    courses: JSON.parse((await getContent('courses')) || JSON.stringify(defaultCourses())),
+    month: cal.month,
+    monthEvents: cal.events,
+    byDay: cal.byDay,
     success: false,
     error: null,
     form: {},
+    ...opts,
   });
-});
+}
+
+router.get('/schedule', (req, res) => renderSchedule(req, res));
 
 router.post('/schedule', publicFormLimiter, async (req, res) => {
   const { customer_name, email, phone, course, scheduled_at, notes } = req.body;
 
-  const render = async (opts = {}) =>
-    res.render('schedule', {
-      activePage: 'schedule',
-      siteName: SITE_NAME,
-      pageTitle: 'Schedule a Session',
-      content: { siteName: SITE_NAME },
-      courses: JSON.parse(
-        (await getContent('courses')) || JSON.stringify(defaultCourses())
-      ),
-      appointments: await listAppointments(),
-      blocked: await listBlockedSlots(),
-      success: false,
-      error: null,
-      ...opts,
-    });
+  const render = (opts = {}) => renderSchedule(req, res, opts);
 
   if (!customer_name || !email || !course || !scheduled_at) {
     return render({

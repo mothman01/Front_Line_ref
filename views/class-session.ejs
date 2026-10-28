@@ -1,0 +1,99 @@
+<%- include('partials/header') %>
+
+<section class="page-hero">
+  <div class="container">
+    <p class="hero-eyebrow"><a href="/schedule" class="text-link">&larr; Back to calendar</a></p>
+    <h1><%= ev.title %></h1>
+    <p class="section-lede"><%= when %><% if (endsAt) { %> – <%= endsAt %><% } %></p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container class-layout">
+    <div class="class-details">
+      <% if (photo) { %>
+        <img class="class-photo" src="/image/<%= photo.id %>" alt="<%= ev.title %>" />
+      <% } %>
+
+      <dl class="class-facts">
+        <div><dt>Date &amp; time</dt><dd><%= when %><% if (endsAt) { %> – <%= endsAt %><% } %></dd></div>
+        <% if (ev.location) { %><div><dt>Location</dt><dd><%= ev.location %></dd></div><% } %>
+        <% if (price) { %><div><dt>Price</dt><dd><%= price %> per seat, paid in full</dd></div><% } %>
+        <div>
+          <dt>Seats available</dt>
+          <dd><span class="seat-pill seat-pill-lg<%= ev.seats_left === 0 ? ' is-full' : '' %>" data-seat-id="<%= ev.id %>" data-seat-format="long"><%= ev.seats_left === 0 ? 'Full' : ev.seats_left + ' of ' + ev.capacity + ' seats left' %></span></dd>
+        </div>
+      </dl>
+
+      <% if (ev.description) { %>
+        <p><%= ev.description %></p>
+      <% } %>
+
+      <% if (course) { %>
+        <h2 class="class-course-name"><%= course.name %></h2>
+        <p class="course-intro"><%= course.intro %></p>
+        <% (course.description || []).forEach(function (para) { %>
+          <p class="course-body"><%= para %></p>
+        <% }) %>
+        <% if (course.prerequisite) { %>
+          <p class="course-prereq"><strong>Recommended prerequisite:</strong> <%= course.prerequisite %></p>
+        <% } %>
+      <% } %>
+    </div>
+
+    <aside class="checkout-card" id="checkout">
+      <h2>Reserve Your Seat</h2>
+
+      <% if (typeof cancelled !== 'undefined' && cancelled) { %>
+        <div class="alert alert-error">Checkout was cancelled and your seat was released. You can try again below.</div>
+      <% } %>
+      <% if (error) { %>
+        <div class="alert alert-error"><%= error %></div>
+      <% } %>
+
+      <% if (isPast) { %>
+        <p class="muted">This class has already taken place. <a href="/schedule" class="text-link">See upcoming classes</a>.</p>
+      <% } else if (ev.seats_left === 0) { %>
+        <p class="muted">This class is full. <a href="/schedule" class="text-link">Check other dates</a> or request a private session.</p>
+      <% } else if (!checkoutOn) { %>
+        <p>Online registration is currently unavailable.</p>
+        <p class="muted">Please contact Front Line Refinement directly to reserve a seat, or <a href="/schedule" class="text-link">request a session</a>.</p>
+      <% } else if (!ev.price_cents) { %>
+        <p class="muted">Pricing for this class hasn't been posted yet. Please contact us to register.</p>
+      <% } else { %>
+        <p class="checkout-price"><span data-unit-cents="<%= ev.price_cents %>" id="checkout-total"><%= price %></span> <span class="muted">due today</span></p>
+        <form method="post" action="/class/<%= ev.id %>/checkout" class="admin-form" id="checkout-form">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+          <label>
+            Full name (must match your ID)
+            <input type="text" name="customer_name" value="<%= form.customer_name || '' %>" autocomplete="name" required />
+          </label>
+          <label>
+            Email
+            <input type="email" name="email" value="<%= form.email || '' %>" autocomplete="email" required />
+          </label>
+          <label>
+            Phone
+            <input type="tel" name="phone" value="<%= form.phone || '' %>" autocomplete="tel" />
+          </label>
+          <label>
+            Seats
+            <select name="seats" id="checkout-seats">
+              <% for (let i = 1; i <= maxSeats; i++) { %>
+                <option value="<%= i %>" <%= String(form.seats) === String(i) ? 'selected' : '' %>><%= i %></option>
+              <% } %>
+            </select>
+          </label>
+          <label class="checkbox-row">
+            <input type="checkbox" name="agree_terms" <%= form.agree_terms === 'on' ? 'checked' : '' %> required />
+            I have read the <a href="/safety" target="_blank" class="text-link">safety rules</a> and will sign the <a href="/waiver" target="_blank" class="text-link">liability waiver</a> before class.
+          </label>
+          <button type="submit" class="btn btn-primary btn-block">Pay in Full &amp; Reserve</button>
+          <p class="checkout-note">You'll be taken to Stripe's secure checkout. Your seat is held for <%= holdMinutes %> minutes while you pay.</p>
+        </form>
+      <% } %>
+    </aside>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

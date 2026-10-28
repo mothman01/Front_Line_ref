@@ -1,370 +1,588 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin — Front Line Refinement</title>
-  <link rel="stylesheet" href="/css/style.css" />
-</head>
-<body class="admin-body">
-  <header class="admin-header">
-    <div class="container admin-header-inner">
-      <a href="/admin" class="brand">
-        <span class="brand-mark">FLR</span>
-        <span class="brand-text"><span class="brand-name">Admin Panel</span></span>
-      </a>
-      <nav class="admin-nav">
-        <a href="/admin?section=bio" class="<%= section === 'bio' ? 'active' : '' %>">Biography &amp; About</a>
-        <a href="/admin?section=courses" class="<%= section === 'courses' ? 'active' : '' %>">Courses</a>
-        <a href="/admin?section=safety" class="<%= section === 'safety' ? 'active' : '' %>">Safety Rules</a>
-        <a href="/admin?section=waivers" class="<%= section === 'waivers' ? 'active' : '' %>">Waivers</a>
-        <a href="/admin?section=calendar" class="<%= section === 'calendar' ? 'active' : '' %>">Appointments</a>
-        <a href="/admin?section=events" class="<%= section === 'events' ? 'active' : '' %>">Events</a>
-        <a href="/admin?section=images" class="<%= section === 'images' ? 'active' : '' %>">Images</a>
-        <a href="/admin?section=views" class="<%= section === 'views' ? 'active' : '' %>">Views</a>
-        <a href="/admin/account">Account</a>
-        <a href="/" target="_blank" class="btn btn-primary btn-sm" style="margin-left:8px">View Site &nearr;</a>
-        <form method="post" action="/admin/logout" class="inline-form">
-          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-          <button type="submit" class="btn btn-ghost btn-sm">Log Out</button>
-        </form>
-      </nav>
-    </div>
-  </header>
+<%- include('partials/admin-top') %>
 
-  <main class="container admin-main">
-    <div class="admin-title-row">
-      <h1>Edit Your Website</h1>
-      <span class="admin-username">Signed in as <%= username %></span>
-    </div>
+      <% if (saveError) { %>
+        <div class="alert alert-error"><%= saveError %></div>
+      <% } %>
+      <% if (saved) { %>
+        <div class="alert alert-success">Changes saved.</div>
+      <% } %>
 
-    <% if (saveError) { %>
-      <div class="alert alert-error"><%= saveError %></div>
-    <% } %>
-
-    <% if (saved) { %>
-      <div class="alert alert-success">Changes saved successfully.</div>
-    <% } %>
-
-    <!-- Biography & About -->
-    <section class="admin-section" id="section-bio">
-      <h2>Biography &amp; About</h2>
-
-      <!-- Profile picture -->
-      <h3 style="margin-top:4px">Profile Picture</h3>
-      <div class="profile-upload">
-        <% if (profileImage) { %>
-          <img class="profile-preview" src="/image/<%= profileImage.id %>" alt="Profile" />
-        <% } else { %>
-          <div class="profile-preview profile-preview-empty">No photo yet</div>
-        <% } %>
-        <div class="profile-upload-actions">
-          <input type="hidden" id="profile-csrf" value="<%= csrfToken %>" />
-          <input type="file" id="profile-file-input" accept="image/*" style="display:none" />
-          <button type="button" class="btn btn-ghost" id="profile-upload-btn">Upload Photo</button>
-        </div>
+<% if (section === 'overview') { %>
+  <%
+    const upcomingSeats = events.reduce((n, e) => n + e.seats_taken, 0);
+    const upcomingCapacity = events.reduce((n, e) => n + e.capacity, 0);
+    const paid = registrations.filter((r) => r.status === 'paid');
+    const revenue = paid.reduce((n, r) => n + r.amount_cents, 0);
+  %>
+      <div class="stat-grid">
+        <a href="/admin?section=events" class="stat-card">
+          <span class="stat-label">Upcoming classes</span>
+          <span class="stat-value"><%= events.length %></span>
+          <span class="stat-foot"><%= upcomingSeats %> of <%= upcomingCapacity %> seats booked</span>
+        </a>
+        <a href="/admin?section=checkout" class="stat-card">
+          <span class="stat-label">Paid registrations</span>
+          <span class="stat-value"><%= paid.length %></span>
+          <span class="stat-foot"><%= formatCents(revenue) || '$0' %> collected online</span>
+        </a>
+        <a href="/admin?section=checkout" class="stat-card">
+          <span class="stat-label">Online checkout</span>
+          <span class="stat-value <%= checkoutEnabled && stripeConfigured ? 'text-success' : 'text-muted' %>"><%= checkoutEnabled && stripeConfigured ? 'On' : 'Off' %></span>
+          <span class="stat-foot"><%= stripeConfigured ? (stripeMode === 'live' ? 'Stripe live mode' : 'Stripe test mode') : 'Stripe not set up yet' %></span>
+        </a>
+        <a href="/admin?section=waivers" class="stat-card">
+          <span class="stat-label">Signed waivers</span>
+          <span class="stat-value"><%= waiverCount %></span>
+          <span class="stat-foot"><%= appointments.length %> upcoming private sessions</span>
+        </a>
       </div>
 
-      <hr style="border:none;border-top:1px solid var(--border);margin:28px 0" />
+      <div class="admin-columns">
+        <section class="admin-card">
+          <div class="admin-card-head">
+            <h2>Next classes</h2>
+            <a href="/admin?section=events" class="btn btn-ghost btn-sm">Manage</a>
+          </div>
+          <% if (events.length) { %>
+            <ul class="admin-list">
+              <% events.slice(0, 6).forEach(function (e) { %>
+                <li>
+                  <div>
+                    <strong><%= e.title %></strong>
+                    <span class="muted"><%= formatDateTime(e.starts_at, { weekday: 'short', month: 'short', year: undefined }) %></span>
+                  </div>
+                  <span class="seat-pill<%= e.seats_left === 0 ? ' is-full' : '' %>"><%= e.seats_taken %> / <%= e.capacity %></span>
+                </li>
+              <% }) %>
+            </ul>
+          <% } else { %>
+            <p class="admin-empty">No upcoming classes. <a href="/admin?section=events" class="text-link">Add a class day</a>.</p>
+          <% } %>
+        </section>
+
+        <section class="admin-card">
+          <div class="admin-card-head">
+            <h2>Recent registrations</h2>
+            <a href="/admin?section=checkout" class="btn btn-ghost btn-sm">View all</a>
+          </div>
+          <% if (paid.length) { %>
+            <ul class="admin-list">
+              <% paid.slice(0, 6).forEach(function (r) { %>
+                <li>
+                  <div>
+                    <strong><%= r.customer_name %></strong>
+                    <span class="muted"><%= r.event_title %> &middot; <%= r.seats %> seat<%= r.seats === 1 ? '' : 's' %></span>
+                  </div>
+                  <span><%= formatCents(r.amount_cents) %></span>
+                </li>
+              <% }) %>
+            </ul>
+          <% } else { %>
+            <p class="admin-empty">No paid registrations yet.</p>
+          <% } %>
+        </section>
+      </div>
+
+      <section class="admin-card">
+        <h2>Quick actions</h2>
+        <div class="quick-actions">
+          <a href="/admin?section=events" class="btn btn-primary btn-sm">Add a class day</a>
+          <a href="/admin?section=courses" class="btn btn-ghost btn-sm">Edit prices &amp; photos</a>
+          <a href="/admin?section=images" class="btn btn-ghost btn-sm">Homepage photos</a>
+          <a href="/admin?section=preview" class="btn btn-ghost btn-sm">Preview the site</a>
+        </div>
+        <p class="admin-hint" style="margin-top:14px"><%= totalViews %> page views in the last 30 days.</p>
+      </section>
+<% } %>
+
+<% if (section === 'bio') { %>
+      <section class="admin-card">
+        <h2>Profile photo</h2>
+        <div class="profile-upload">
+          <% if (profileImage) { %>
+            <img class="profile-preview" src="/image/<%= profileImage.id %>" alt="Profile" />
+          <% } else { %>
+            <div class="profile-preview profile-preview-empty">No photo yet</div>
+          <% } %>
+          <div class="profile-upload-actions">
+            <input type="hidden" id="profile-csrf" value="<%= csrfToken %>" />
+            <input type="file" id="profile-file-input" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
+            <button type="button" class="btn btn-ghost" id="profile-upload-btn"><%= profileImage ? 'Change Photo' : 'Upload Photo' %></button>
+            <p class="admin-hint">Shown on the Biography page. PNG, JPEG, WebP or GIF.</p>
+          </div>
+        </div>
+      </section>
 
       <form method="post" action="/admin/content" class="admin-form" id="content-form">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-        <label>
-          Name
-          <input type="text" name="bio_name" value="<%= content.bio_name || '' %>" />
-        </label>
-        <label>
-          Title
-          <input type="text" name="bio_title" value="<%= content.bio_title || '' %>" />
-        </label>
-
-        <label>Biography</label>
-        <div class="rich-editor">
-          <div class="rich-toolbar" data-target="bio_body_editor">
-            <button type="button" data-cmd="bold" title="Bold"><strong>B</strong></button>
-            <button type="button" data-cmd="italic" title="Italic"><em>I</em></button>
-            <button type="button" data-cmd="underline" title="Underline"><u>U</u></button>
-            <button type="button" data-cmd="insertUnorderedList" title="Bullet list">&bull;&nbsp;List</button>
-            <button type="button" data-cmd="insertOrderedList" title="Numbered list">1. List</button>
-            <button type="button" data-cmd="formatBlock" data-value="h3" title="Heading">H</button>
-            <button type="button" data-cmd="formatBlock" data-value="p" title="Paragraph">P</button>
+        <section class="admin-card">
+          <h2>Biography</h2>
+          <div class="form-grid">
+            <label>
+              Name
+              <input type="text" name="bio_name" value="<%= content.bio_name || '' %>" />
+            </label>
+            <label>
+              Title
+              <input type="text" name="bio_title" value="<%= content.bio_title || '' %>" />
+            </label>
           </div>
-          <div class="rich-content" id="bio_body_editor" contenteditable="true"><%= content.bio_body || '' %></div>
-          <textarea name="bio_body" id="bio_body_textarea" rows="1" style="display:none"></textarea>
-        </div>
-
-        <label>About / Company Info</label>
-        <div class="rich-editor">
-          <div class="rich-toolbar" data-target="about_body_editor">
-            <button type="button" data-cmd="bold"><strong>B</strong></button>
-            <button type="button" data-cmd="italic"><em>I</em></button>
-            <button type="button" data-cmd="underline"><u>U</u></button>
-            <button type="button" data-cmd="insertUnorderedList">&bull;&nbsp;List</button>
-            <button type="button" data-cmd="insertOrderedList">1. List</button>
-            <button type="button" data-cmd="formatBlock" data-value="h3">H</button>
-            <button type="button" data-cmd="formatBlock" data-value="p">P</button>
+          <label for="bio_body_editor">Biography text</label>
+          <div class="rich-editor">
+            <div class="rich-toolbar" data-target="bio_body_editor">
+              <button type="button" data-cmd="bold" title="Bold"><strong>B</strong></button>
+              <button type="button" data-cmd="italic" title="Italic"><em>I</em></button>
+              <button type="button" data-cmd="underline" title="Underline"><u>U</u></button>
+              <button type="button" data-cmd="insertUnorderedList" title="Bullet list">&bull;&nbsp;List</button>
+              <button type="button" data-cmd="insertOrderedList" title="Numbered list">1. List</button>
+              <button type="button" data-cmd="formatBlock" data-value="h3" title="Heading">H</button>
+              <button type="button" data-cmd="formatBlock" data-value="p" title="Paragraph">P</button>
+            </div>
+            <div class="rich-content" id="bio_body_editor" contenteditable="true"><%- content.bio_body || '' %></div>
+            <textarea name="bio_body" id="bio_body_textarea" rows="1" hidden></textarea>
           </div>
-          <div class="rich-content" id="about_body_editor" contenteditable="true"><%= content.about_body || '' %></div>
-          <textarea name="about_body" id="about_body_textarea" rows="1" style="display:none"></textarea>
-        </div>
+        </section>
 
-        <label>
-          About Closing Line
-          <input type="text" name="about_line" value="<%= content.about_line || '' %>" />
-        </label>
-        <button type="submit" class="btn btn-primary">Save Biography &amp; About</button>
+        <section class="admin-card">
+          <h2>About the company</h2>
+          <label for="about_body_editor">About text</label>
+          <div class="rich-editor">
+            <div class="rich-toolbar" data-target="about_body_editor">
+              <button type="button" data-cmd="bold" title="Bold"><strong>B</strong></button>
+              <button type="button" data-cmd="italic" title="Italic"><em>I</em></button>
+              <button type="button" data-cmd="underline" title="Underline"><u>U</u></button>
+              <button type="button" data-cmd="insertUnorderedList" title="Bullet list">&bull;&nbsp;List</button>
+              <button type="button" data-cmd="insertOrderedList" title="Numbered list">1. List</button>
+              <button type="button" data-cmd="formatBlock" data-value="h3" title="Heading">H</button>
+              <button type="button" data-cmd="formatBlock" data-value="p" title="Paragraph">P</button>
+            </div>
+            <div class="rich-content" id="about_body_editor" contenteditable="true"><%- content.about_body || '' %></div>
+            <textarea name="about_body" id="about_body_textarea" rows="1" hidden></textarea>
+          </div>
+          <label>
+            Closing line
+            <input type="text" name="about_line" value="<%= content.about_line || '' %>" />
+          </label>
+        </section>
+
+        <div class="save-bar">
+          <a href="/biography" target="_blank" rel="noopener" class="text-link">View Biography page &nearr;</a>
+          <button type="submit" class="btn btn-primary">Save Biography &amp; About</button>
+        </div>
       </form>
-    </section>
+<% } %>
 
-    <!-- Courses -->
-    <section class="admin-section" id="section-courses">
-      <h2>Courses</h2>
-      <p class="admin-sub">Edit each course directly below. Focus points are one per line. <a href="/classes" target="_blank" class="text-link">Preview the Classes page &rarr;</a></p>
-
+<% if (section === 'courses') { %>
+      <input type="hidden" id="course-photo-csrf" value="<%= csrfToken %>" />
       <form method="post" action="/admin/courses-form" class="admin-form">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
         <% courses.forEach(function (c, idx) { %>
-          <div class="course-editor" data-index="<%= idx %>">
-            <h3><%= c.name %></h3>
+          <% const photo = coursePhotos[c.id]; %>
+          <details class="admin-card course-editor"<%= idx === 0 ? ' open' : '' %>>
+            <summary class="course-editor-summary">
+              <% if (photo) { %>
+                <img class="course-editor-thumb" src="/image/<%= photo.id %>" alt="" />
+              <% } else { %>
+                <span class="course-editor-thumb is-empty">No photo</span>
+              <% } %>
+              <span class="course-editor-name"><%= c.name %></span>
+              <% if (c.comingSoon) { %><span class="status-badge">Coming soon</span><% } %>
+              <span class="course-editor-price"><%= c.priceCents != null ? formatCents(c.priceCents) : 'No price' %></span>
+            </summary>
+
             <input type="hidden" name="course_<%= idx %>_id" value="<%= c.id %>" />
-            <label>
-              Course name
-              <input type="text" name="course_<%= idx %>_name" value="<%= c.name %>" />
-            </label>
+            <div class="course-photo-row">
+              <% if (photo) { %>
+                <img class="course-photo-preview" src="/image/<%= photo.id %>" alt="<%= c.name %> photo" />
+              <% } else { %>
+                <div class="course-photo-preview profile-preview-empty">No photo</div>
+              <% } %>
+              <div>
+                <input type="file" class="course-photo-input" data-course-id="<%= c.id %>" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
+                <button type="button" class="btn btn-ghost btn-sm course-photo-btn"><%= photo ? 'Change Photo' : 'Upload Photo' %></button>
+                <p class="admin-hint">Shown on the Classes page and each class's registration page.</p>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <label>
+                Course name
+                <input type="text" name="course_<%= idx %>_name" value="<%= c.name %>" />
+              </label>
+              <label>
+                Price per seat
+                <span class="input-prefix"><span>$</span><input type="text" name="course_<%= idx %>_price" inputmode="decimal" value="<%= c.priceCents != null ? (c.priceCents / 100).toFixed(2) : '' %>" placeholder="Blank hides the price" /></span>
+              </label>
+            </div>
             <label class="checkbox-row">
               <input type="checkbox" name="course_<%= idx %>_comingSoon" value="true" <%= c.comingSoon ? 'checked' : '' %> />
-              Mark as "Coming Soon"
+              Mark as &ldquo;Coming Soon&rdquo;
             </label>
             <label>
               Introduction
               <textarea name="course_<%= idx %>_intro" rows="3"><%= c.intro %></textarea>
             </label>
             <label>
-              Description (one paragraph per line)
-              <textarea name="course_<%= idx %>_description" rows="6"><%= (c.description || []).join('\n') %></textarea>
+              Description <span class="admin-hint-inline">(one paragraph per line)</span>
+              <textarea name="course_<%= idx %>_description" rows="5"><%= (c.description || []).join('\n') %></textarea>
             </label>
-            <div class="form-grid">
-              <label>
-                Recommended prerequisite
-                <input type="text" name="course_<%= idx %>_prerequisite" value="<%= c.prerequisite || '' %>" />
-              </label>
-            </div>
-          </div>
+            <label>
+              Recommended prerequisite
+              <input type="text" name="course_<%= idx %>_prerequisite" value="<%= c.prerequisite || '' %>" />
+            </label>
+          </details>
         <% }) %>
-        <button type="submit" class="btn btn-primary">Save All Courses</button>
+        <div class="save-bar">
+          <a href="/classes" target="_blank" rel="noopener" class="text-link">View Classes page &nearr;</a>
+          <button type="submit" class="btn btn-primary">Save All Courses</button>
+        </div>
       </form>
-    </section>
+<% } %>
 
-    <!-- Safety Rules -->
-    <section class="admin-section" id="section-safety">
-      <h2>Safety Rules</h2>
+<% if (section === 'safety') { %>
+  <% let rules = []; try { rules = JSON.parse(content.safety_rules || '[]'); } catch (e) {} %>
       <form method="post" action="/admin/safety" class="admin-form">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-        <label>
-          Intro paragraph
-          <textarea name="safety_intro" rows="3"><%= content.safety_intro || '' %></textarea>
-        </label>
-        <label>
-          Safety rules JSON
-          <textarea name="safety_rules" rows="28" class="mono"><%= content.safety_rules || '' %></textarea>
-        </label>
-        <label>
-          Closing line
-          <input type="text" name="safety_closing" value="<%= content.safety_closing || '' %>" />
-        </label>
-        <button type="submit" class="btn btn-primary">Save Safety Rules</button>
+        <section class="admin-card">
+          <label>
+            Intro paragraph
+            <textarea name="safety_intro" rows="3"><%= content.safety_intro || '' %></textarea>
+          </label>
+          <label>
+            Closing line
+            <input type="text" name="safety_closing" value="<%= content.safety_closing || '' %>" />
+          </label>
+        </section>
+
+        <div id="rule-list">
+          <% rules.forEach(function (r) { %>
+            <section class="admin-card rule-editor">
+              <div class="rule-editor-head">
+                <input type="text" name="rule_title[]" value="<%= r.title %>" placeholder="Rule title" aria-label="Rule title" />
+                <button type="button" class="btn btn-ghost btn-sm btn-danger-text rule-remove">Remove</button>
+              </div>
+              <textarea name="rule_body[]" rows="4" aria-label="Rule points, one per line"><%= (r.body || []).join('\n') %></textarea>
+            </section>
+          <% }) %>
+        </div>
+        <template id="rule-template">
+          <section class="admin-card rule-editor">
+            <div class="rule-editor-head">
+              <input type="text" name="rule_title[]" placeholder="Rule title" aria-label="Rule title" />
+              <button type="button" class="btn btn-ghost btn-sm btn-danger-text rule-remove">Remove</button>
+            </div>
+            <textarea name="rule_body[]" rows="4" placeholder="One point per line" aria-label="Rule points, one per line"></textarea>
+          </section>
+        </template>
+        <button type="button" class="btn btn-ghost" id="rule-add">+ Add a rule</button>
+        <p class="admin-hint">Each line in a rule's box becomes one bullet point.</p>
+
+        <div class="save-bar">
+          <a href="/safety" target="_blank" rel="noopener" class="text-link">View Safety page &nearr;</a>
+          <button type="submit" class="btn btn-primary">Save Safety Rules</button>
+        </div>
       </form>
-      <p class="admin-sub">Rules use the format: a list of <code>{ "title": "...", "body": ["...", "..."] }</code>.</p>
-    </section>
+<% } %>
 
-    <!-- Waivers -->
-    <section class="admin-section" id="section-waivers">
-      <h2>Signed Waivers (<%= waiverCount || 0 %>)</h2>
-      <% if (waivers && waivers.length) { %>
-        <table class="admin-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>DOB</th>
-              <th>Signed</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% waivers.forEach(function (w) { %>
-              <tr>
-                <td><%= w.full_name %></td>
-                <td><%= w.email %></td>
-                <td><%= w.phone || '—' %></td>
-                <td><%= w.date_of_birth || '—' %></td>
-                <td><%= new Date(w.signed_at).toLocaleString() %></td>
-              </tr>
+<% if (section === 'images') { %>
+      <section class="admin-card">
+        <input type="hidden" id="csrf-token" value="<%= csrfToken %>" />
+        <div class="dropzone" id="image-dropzone" role="button" tabindex="0">
+          <p><strong>Drop photos here</strong></p>
+          <p class="admin-hint" style="margin:0">or click to choose files (PNG, JPEG, WebP, GIF)</p>
+          <input type="file" id="image-file-input" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden />
+        </div>
+
+        <% if (images.length) { %>
+          <div class="image-thumbs" id="image-thumbs">
+            <% images.forEach(function (img) { %>
+              <div class="image-thumb">
+                <img src="/image/<%= img.id %>" alt="<%= img.filename %>" loading="lazy" />
+                <button type="button" class="remove-img" data-id="<%= img.id %>" title="Remove" aria-label="Remove <%= img.filename %>">&times;</button>
+              </div>
             <% }) %>
-          </tbody>
-        </table>
-      <% } else { %>
-        <p class="admin-sub">No waivers have been signed yet.</p>
-      <% } %>
-    </section>
-
-    <!-- Calendar -->
-    <section class="admin-section" id="section-calendar">
-      <h2>Appointments</h2>
-      <% if (appointments && appointments.length) { %>
-        <table class="admin-table">
-          <thead>
-            <tr>
-              <th>When</th>
-              <th>Customer</th>
-              <th>Email</th>
-              <th>Course</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% appointments.forEach(function (a) { %>
-              <tr>
-                <td><%= new Date(a.scheduled_at).toLocaleString() %></td>
-                <td><%= a.customer_name %></td>
-                <td><%= a.email %></td>
-                <td><%= a.course %></td>
-                <td><%= a.status %></td>
-                <td>
-                  <% if (a.status !== 'cancelled') { %>
-                    <form method="post" action="/admin/appointments/cancel" class="inline-form">
-                      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-                      <input type="hidden" name="id" value="<%= a.id %>" />
-                      <button type="submit" class="btn btn-ghost btn-sm">Cancel</button>
-                    </form>
-                  <% } else { %>
-                    <form method="post" action="/admin/appointments/confirm" class="inline-form">
-                      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-                      <input type="hidden" name="id" value="<%= a.id %>" />
-                      <button type="submit" class="btn btn-ghost btn-sm">Reinstate</button>
-                    </form>
-                  <% } %>
-                </td>
-              </tr>
-            <% }) %>
-          </tbody>
-        </table>
-      <% } else { %>
-        <p class="admin-sub">No appointments booked yet.</p>
-      <% } %>
-    </section>
-
-    <!-- Events (owner-created calendar) -->
-    <section class="admin-section" id="section-events">
-      <h2>Manage Events</h2>
-      <form method="post" action="/admin/events" class="admin-form">
-        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-        <label>
-          Event title
-          <input type="text" name="title" required />
-        </label>
-        <label>
-          Link to course (optional)
-          <select name="course_id">
-            <option value="">— Not linked —</option>
-            <% courses.forEach(function (c) { %>
-              <option value="<%= c.id %>"><%= c.name %></option>
-            <% }) %>
-          </select>
-        </label>
-        <label>
-          Starts at
-          <input type="datetime-local" name="starts_at" required />
-        </label>
-        <label>
-          Ends at (optional)
-          <input type="datetime-local" name="ends_at" />
-        </label>
-        <label>
-          Location
-          <input type="text" name="location" />
-        </label>
-        <label>
-          Price (e.g. "$150")
-          <input type="text" name="price" />
-        </label>
-        <label>
-          Description
-          <textarea name="description" rows="3"></textarea>
-        </label>
-        <button type="submit" class="btn btn-primary">Add Event</button>
-      </form>
-
-      <% if (events && events.length) { %>
-        <table class="admin-table" style="margin-top:20px">
-          <thead>
-            <tr><th>Title</th><th>Starts</th><th>Course</th><th></th></tr>
-          </thead>
-          <tbody>
-            <% events.forEach(function (e) { %>
-              <tr>
-                <td><%= e.title %></td>
-                <td><%= new Date(e.starts_at).toLocaleString() %></td>
-                <td><%= e.course_name || '—' %></td>
-                <td>
-                  <form method="post" action="/admin/events/delete" class="inline-form">
-                    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-                    <input type="hidden" name="id" value="<%= e.id %>" />
-                    <button type="submit" class="btn btn-ghost btn-sm">Delete</button>
-                  </form>
-                </td>
-              </tr>
-            <% }) %>
-          </tbody>
-        </table>
-      <% } %>
-    </section>
-
-    <!-- Images (drag-and-drop slideshow) -->
-    <section class="admin-section" id="section-images">
-      <h2>Slideshow Images</h2>
-      <p class="admin-sub">Drag and drop images here to add them to the homepage slideshow, or click to browse.</p>
-      <input type="hidden" id="csrf-token" value="<%= csrfToken %>" />
-      <div class="dropzone" id="image-dropzone">
-        <p>Drop images here</p>
-        <p class="admin-sub" style="margin:0">or click to select files</p>
-        <input type="file" id="image-file-input" accept="image/*" multiple style="display:none" />
-      </div>
-
-      <div class="image-thumbs" id="image-thumbs">
-        <% images.forEach(function (img) { %>
-          <div class="image-thumb">
-            <img src="/image/<%= img.id %>" alt="<%= img.filename %>" />
-            <button class="remove-img" data-id="<%= img.id %>" title="Remove">&times;</button>
           </div>
-        <% }) %>
-      </div>
-      <% if (!images.length) { %>
-        <p class="admin-sub">No images yet.</p>
-      <% } %>
-    </section>
+        <% } else { %>
+          <p class="admin-empty">No slideshow photos yet.</p>
+        <% } %>
+      </section>
+<% } %>
 
-    <!-- Page Views -->
-    <section class="admin-section" id="section-views">
-      <h2>Page Views</h2>
-      <% if (viewCounts && Object.keys(viewCounts).length) { %>
-        <table class="admin-table">
-          <thead>
-            <tr><th>Page</th><th>Views</th></tr>
-          </thead>
-          <tbody>
-            <% Object.keys(viewCounts).forEach(function (path) { %>
-              <tr><td><%= path %></td><td><%= viewCounts[path] %></td></tr>
+<% if (section === 'events') { %>
+      <section class="admin-card">
+        <h2>Add a class day</h2>
+        <form method="post" action="/admin/events" class="admin-form">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+          <div class="form-grid">
+            <label>
+              Class title
+              <input type="text" name="title" required placeholder="e.g. Pistol 1 — Saturday Morning" />
+            </label>
+            <label>
+              Course
+              <select name="course_id">
+                <option value="">— Not linked —</option>
+                <% courses.forEach(function (c) { %>
+                  <option value="<%= c.id %>"><%= c.name %><%= c.priceCents != null ? ' (' + formatCents(c.priceCents) + ')' : '' %></option>
+                <% }) %>
+              </select>
+            </label>
+            <label>
+              Starts
+              <input type="datetime-local" name="starts_at" required />
+            </label>
+            <label>
+              Ends <span class="admin-hint-inline">(optional)</span>
+              <input type="datetime-local" name="ends_at" />
+            </label>
+            <label>
+              Max seats
+              <input type="number" name="capacity" min="1" max="500" value="8" required />
+            </label>
+            <label>
+              Price per seat
+              <span class="input-prefix"><span>$</span><input type="text" name="price" inputmode="decimal" placeholder="Blank uses the course price" /></span>
+            </label>
+          </div>
+          <label>
+            Location
+            <input type="text" name="location" />
+          </label>
+          <label>
+            Description <span class="admin-hint-inline">(optional, shown on the class page)</span>
+            <textarea name="description" rows="3"></textarea>
+          </label>
+          <p class="admin-hint">Times are in <%= siteTimezone.replace('_', ' ') %> time.</p>
+          <button type="submit" class="btn btn-primary">Add Class Day</button>
+        </form>
+      </section>
+
+      <section class="admin-card">
+        <div class="admin-card-head">
+          <h2>Scheduled classes</h2>
+          <a href="/schedule" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">View calendar &nearr;</a>
+        </div>
+        <% if (events.length) { %>
+          <% events.forEach(function (e) { %>
+            <details class="event-editor<%= new Date(e.starts_at) < new Date() ? ' is-past' : '' %>">
+              <summary>
+                <span class="event-editor-title"><%= e.title %></span>
+                <span class="event-editor-meta"><%= formatDateTime(e.starts_at, { weekday: 'short', month: 'short' }) %></span>
+                <span class="seat-pill<%= e.seats_left === 0 ? ' is-full' : '' %>"><%= e.seats_taken %> / <%= e.capacity %> booked</span>
+                <span class="event-editor-meta"><%= e.price_cents != null ? formatCents(e.price_cents) : 'No price' %></span>
+              </summary>
+              <form method="post" action="/admin/events/update" class="admin-form">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                <input type="hidden" name="id" value="<%= e.id %>" />
+                <label>Class title <input type="text" name="title" value="<%= e.title %>" required /></label>
+                <div class="form-grid">
+                  <label>Starts <input type="datetime-local" name="starts_at" value="<%= utcToLocalInput(e.starts_at) %>" required /></label>
+                  <label>Ends <input type="datetime-local" name="ends_at" value="<%= utcToLocalInput(e.ends_at) %>" /></label>
+                  <label>Max seats <input type="number" name="capacity" min="1" max="500" value="<%= e.capacity %>" required /></label>
+                  <label>Price per seat <span class="input-prefix"><span>$</span><input type="text" name="price" inputmode="decimal" value="<%= e.price_cents != null ? (e.price_cents / 100).toFixed(2) : '' %>" /></span></label>
+                </div>
+                <label>Location <input type="text" name="location" value="<%= e.location || '' %>" /></label>
+                <label>Description <textarea name="description" rows="3"><%= e.description || '' %></textarea></label>
+                <div class="event-editor-actions">
+                  <button type="submit" class="btn btn-primary btn-sm">Save Changes</button>
+                  <a href="/class/<%= e.id %>" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">View Page &nearr;</a>
+                </div>
+              </form>
+              <form method="post" action="/admin/events/delete" class="event-editor-delete" data-confirm="Delete this class from the calendar?">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                <input type="hidden" name="id" value="<%= e.id %>" />
+                <button type="submit" class="btn btn-ghost btn-sm btn-danger-text">Delete Class</button>
+              </form>
+            </details>
+          <% }) %>
+        <% } else { %>
+          <p class="admin-empty">No classes scheduled yet.</p>
+        <% } %>
+      </section>
+<% } %>
+
+<% if (section === 'checkout') { %>
+      <section class="admin-card">
+        <form method="post" action="/admin/checkout-toggle" class="checkout-toggle">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+          <input type="hidden" name="enabled" value="<%= checkoutEnabled ? 'false' : 'true' %>" />
+          <div>
+            <p class="checkout-toggle-label">Online registration &amp; payment</p>
+            <p class="admin-sub" style="margin:0">
+              <% if (checkoutEnabled) { %>Customers can reserve seats by paying in full online.<% } else { %>Off: class pages show a &ldquo;contact us to register&rdquo; message instead of checkout.<% } %>
+            </p>
+          </div>
+          <button type="submit" class="switch<%= checkoutEnabled ? ' is-on' : '' %>" role="switch" aria-checked="<%= checkoutEnabled %>" aria-label="Turn online checkout <%= checkoutEnabled ? 'off' : 'on' %>">
+            <span class="switch-knob"></span>
+            <span class="switch-text"><%= checkoutEnabled ? 'ON' : 'OFF' %></span>
+          </button>
+        </form>
+
+        <% if (!stripeConfigured) { %>
+          <div class="alert alert-warn" style="margin:16px 0 0">Stripe isn't set up yet, so checkout stays unavailable even when switched on. Customers see a &ldquo;contact us&rdquo; message.</div>
+        <% } else { %>
+          <p class="admin-hint" style="margin-top:16px">
+            Stripe: <strong><%= stripeMode === 'live' ? 'LIVE mode (real payments)' : 'TEST mode (no real charges)' %></strong>.
+            <% if (!webhookConfigured) { %><br /><span class="text-danger">Webhook secret not set: payments are only confirmed when the customer returns to the site.</span><% } %>
+          </p>
+        <% } %>
+      </section>
+
+      <section class="admin-card">
+        <h2>Registrations</h2>
+        <% if (registrations.length) { %>
+          <div class="table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr><th>Class</th><th>Customer</th><th>Contact</th><th>Seats</th><th>Paid</th><th>Status</th><th></th></tr>
+              </thead>
+              <tbody>
+                <% registrations.forEach(function (r) { %>
+                  <tr>
+                    <td><%= r.event_title %><br /><span class="muted"><%= formatDateTime(r.event_starts_at, { weekday: 'short', month: 'short' }) %></span></td>
+                    <td><%= r.customer_name %></td>
+                    <td><a href="mailto:<%= r.email %>" class="text-link"><%= r.email %></a><% if (r.phone) { %><br /><span class="muted"><%= r.phone %></span><% } %></td>
+                    <td><%= r.seats %></td>
+                    <td><%= formatCents(r.amount_cents) %></td>
+                    <td><span class="status-badge status-<%= r.status %>"><%= r.status === 'pending' ? 'checking out' : r.status %></span></td>
+                    <td>
+                      <% if (r.status === 'paid') { %>
+                        <form method="post" action="/admin/registrations/cancel" class="inline-form" data-confirm="Cancel this registration and free its seats? Refunds must be issued in your Stripe dashboard.">
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                          <input type="hidden" name="id" value="<%= r.id %>" />
+                          <button type="submit" class="btn btn-ghost btn-sm">Cancel</button>
+                        </form>
+                      <% } %>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+          <p class="admin-hint">Cancelling frees the seats on the calendar. Issue any refund from your Stripe dashboard.</p>
+        <% } else { %>
+          <p class="admin-empty">No registrations yet.</p>
+        <% } %>
+      </section>
+<% } %>
+
+<% if (section === 'calendar') { %>
+      <section class="admin-card">
+        <% if (appointments.length) { %>
+          <div class="table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr><th>When</th><th>Customer</th><th>Contact</th><th>Course</th><th>Notes</th><th>Status</th><th></th></tr>
+              </thead>
+              <tbody>
+                <% appointments.forEach(function (a) { %>
+                  <tr>
+                    <td><%= formatDateTime(a.scheduled_at, { weekday: 'short', month: 'short' }) %></td>
+                    <td><%= a.customer_name %></td>
+                    <td><a href="mailto:<%= a.email %>" class="text-link"><%= a.email %></a><% if (a.phone) { %><br /><span class="muted"><%= a.phone %></span><% } %></td>
+                    <td><%= a.course %></td>
+                    <td><%= a.notes || '—' %></td>
+                    <td><span class="status-badge status-<%= a.status === 'cancelled' ? 'cancelled' : 'paid' %>"><%= a.status %></span></td>
+                    <td>
+                      <form method="post" action="/admin/appointments/<%= a.status !== 'cancelled' ? 'cancel' : 'confirm' %>" class="inline-form">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                        <input type="hidden" name="id" value="<%= a.id %>" />
+                        <button type="submit" class="btn btn-ghost btn-sm"><%= a.status !== 'cancelled' ? 'Cancel' : 'Reinstate' %></button>
+                      </form>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } else { %>
+          <p class="admin-empty">No private session requests yet.</p>
+        <% } %>
+      </section>
+<% } %>
+
+<% if (section === 'waivers') { %>
+      <section class="admin-card">
+        <% if (waivers.length) { %>
+          <input type="search" class="table-filter" data-filter-table="waiver-table" placeholder="Search by name or email…" aria-label="Search waivers" />
+          <div class="table-wrap">
+            <table class="admin-table" id="waiver-table">
+              <thead>
+                <tr><th>Name</th><th>Email</th><th>Phone</th><th>Date of birth</th><th>Signed</th></tr>
+              </thead>
+              <tbody>
+                <% waivers.forEach(function (w) { %>
+                  <tr>
+                    <td><%= w.full_name %></td>
+                    <td><%= w.email %></td>
+                    <td><%= w.phone || '—' %></td>
+                    <td><%= w.date_of_birth || '—' %></td>
+                    <td><%= formatDateTime(w.signed_at, { weekday: undefined, month: 'short' }) %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } else { %>
+          <p class="admin-empty">No waivers have been signed yet.</p>
+        <% } %>
+      </section>
+<% } %>
+
+<% if (section === 'views') { %>
+  <% const paths = Object.keys(viewCounts); const maxViews = Math.max(1, ...paths.map((p) => viewCounts[p])); %>
+      <section class="admin-card">
+        <% if (paths.length) { %>
+          <ul class="bar-list">
+            <% paths.slice(0, 25).forEach(function (p) { %>
+              <li>
+                <span class="bar-label"><%= p %></span>
+                <span class="bar-track"><span class="bar-fill" style="width:<%= Math.round((viewCounts[p] / maxViews) * 100) %>%"></span></span>
+                <span class="bar-value"><%= viewCounts[p] %></span>
+              </li>
             <% }) %>
-          </tbody>
-        </table>
-      <% } else { %>
-        <p class="admin-sub">No page views recorded yet.</p>
-      <% } %>
-    </section>
-  </main>
+          </ul>
+          <p class="admin-hint">Your own visits while signed in aren't counted.</p>
+        <% } else { %>
+          <p class="admin-empty">No page views recorded yet.</p>
+        <% } %>
+      </section>
+<% } %>
 
-  <script src="/js/main.js"></script>
-</body>
-</html>
+<% if (section === 'preview') { %>
+      <section class="admin-card preview-card">
+        <div class="preview-toolbar">
+          <label class="preview-page">
+            <span class="sr-only">Page</span>
+            <select id="preview-page">
+              <option value="/">Home</option>
+              <option value="/biography">Biography</option>
+              <option value="/about">About</option>
+              <option value="/safety">Safety Rules</option>
+              <option value="/classes">Classes</option>
+              <option value="/schedule">Class Calendar</option>
+              <option value="/waiver">Waiver</option>
+              <% if (events.length) { %>
+                <optgroup label="Class registration pages">
+                  <% events.slice(0, 20).forEach(function (e) { %>
+                    <option value="/class/<%= e.id %>"><%= e.title %> — <%= formatDateTime(e.starts_at, { weekday: undefined, month: 'short', year: undefined, hour: undefined, minute: undefined }) %></option>
+                  <% }) %>
+                </optgroup>
+              <% } %>
+            </select>
+          </label>
+          <div class="preview-devices" role="group" aria-label="Device size">
+            <button type="button" class="active" data-device="desktop">Desktop</button>
+            <button type="button" data-device="tablet">Tablet</button>
+            <button type="button" data-device="phone">Phone</button>
+          </div>
+          <button type="button" class="btn btn-ghost btn-sm" id="preview-reload">Reload</button>
+          <a href="/" target="_blank" rel="noopener" class="btn btn-ghost btn-sm" id="preview-open">Open in new tab &nearr;</a>
+        </div>
+        <div class="preview-stage">
+          <iframe id="preview-frame" class="preview-frame is-desktop" src="/" title="Customer view of the website"></iframe>
+        </div>
+      </section>
+<% } %>
+
+<%- include('partials/admin-bottom') %>

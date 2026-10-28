@@ -11,10 +11,20 @@ RestartSec=3
 # Production environment (edit these values before starting the service)
 Environment=NODE_ENV=production
 Environment=PORT=3000
+# Only accept connections from this machine (Cloudflare Tunnel connects locally).
+Environment=HOST=127.0.0.1
 Environment=DATABASE_URL=postgresql://REPLACE_ME
 Environment=ADMIN_USERNAME=admin
 Environment=ADMIN_PASSWORD=REPLACE_ME
 Environment=SESSION_SECRET=REPLACE_ME
+
+# Online class checkout (Stripe). Optional: leave these commented out and the
+# site runs normally with online checkout unavailable. When ready, uncomment
+# and start with test keys (sk_test_...), then switch to live keys (sk_live_...).
+#Environment=STRIPE_SECRET_KEY=REPLACE_ME
+#Environment=STRIPE_WEBHOOK_SECRET=REPLACE_ME
+Environment=SITE_URL=https://frontlinerefinement.com
+Environment=SITE_TIMEZONE=America/Chicago
 
 [Install]
 WantedBy=default.target

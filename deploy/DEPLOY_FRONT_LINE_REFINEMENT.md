@@ -198,6 +198,30 @@ In the Cloudflare Zero Trust dashboard (one.cloudflare.com):
 This puts a login gate in front of /admin in addition to the app's own login.
 
 ================================================================================
+UPDATING AN EXISTING DEPLOYMENT
+================================================================================
+From the Windows PC (PowerShell), package the app without node_modules/data/.env
+and copy it over:
+
+  tar -czf "$env:TEMP\flr.tgz" --exclude=node_modules --exclude=data --exclude=.env --exclude=.git -C C:\Softwareapp\websites front-line-refinement
+  scp "$env:TEMP\flr.tgz" eigen@192.168.1.32:/home/eigen/flr.tgz
+
+On the Dell (ssh eigen@192.168.1.32):
+
+  cp -a /home/eigen/flr /home/eigen/flr-backup-$(date +%Y%m%d-%H%M)
+  tar -xzf /home/eigen/flr.tgz -C /home/eigen/flr --strip-components=1
+  cd /home/eigen/flr && npm ci --omit=dev
+  systemctl --user restart flr.service
+  systemctl --user status flr.service --no-pager
+
+The installed unit (~/.config/systemd/user/flr.service) is not overwritten, so
+your secrets stay put. Database changes apply automatically on startup and only
+add tables/columns.
+
+Roll back: stop the service, move the backup folder back to /home/eigen/flr,
+start the service.
+
+================================================================================
 TROUBLESHOOTING
 ================================================================================
 * "DATABASE_URL must be set in production" -> set it in .env or the unit.
